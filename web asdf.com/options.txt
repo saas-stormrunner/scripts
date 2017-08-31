@@ -1,0 +1,9 @@
+-+
+-DCCI
+-D_IDA_XL
+-DWINNT
+-IC:\Users\villegos\Documents\scripts\web asdf.com
+-IC:\Program Files (x86)\HP\Virtual User Generator\include
+-ec:\users\villegos\documents\scripts\web asdf.com\\logfile.log
+c:\users\villegos\documents\scripts\web asdf.com\\combined_web asdf.com.c
+c:\users\villegos\documents\scripts\web asdf.com\\pre_cci.c

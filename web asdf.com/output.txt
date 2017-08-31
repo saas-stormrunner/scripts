@@ -1,0 +1,35 @@
+Virtual User Script started at : 8/12/2016 10:08:07 AM
+Starting action vuser_init.
+Web Turbo Replay of LoadRunner 12.50.0 for Windows 7; build 1096 (Aug 12 2016 16:55:24)  	[MsgId: MMSG-27143]
+Run mode: HTML  	[MsgId: MMSG-26993]
+Replay user agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; Trident/7.0; rv:11.0) like Gecko  	[MsgId: MMSG-26988]
+Run-Time Settings file: "C:\Users\villegos\Documents\scripts\web asdf.com\\default.cfg"  	[MsgId: MMSG-27141]
+Starting to download the proxy automatic configuration script, URL="http://autocache.hpecorp.net/"  	[MsgId: MMSG-27097]
+Proxy automatic configuration script (URL="http://autocache.hpecorp.net/") downloaded and evaluated successfully  	[MsgId: MMSG-27096]
+vuser_init.c(3): web_set_sockets_option started  	[MsgId: MMSG-26355]
+vuser_init.c(3): web_set_sockets_option was successful  	[MsgId: MMSG-26392]
+Ending action vuser_init.
+Running Vuser...
+Starting iteration 1.
+Warning -27077: The "vuser_init" section contains web function(s) when the "Simulate a new user on each iteration" Run-Time Setting is ON.  This may produce unpredictable results with multiple iterations  	[MsgId: MWAR-27077]
+Maximum number of concurrent connections per server: 6  	[MsgId: MMSG-26989]
+Starting action Action.
+Action.c(4): Notify: Transaction "1_transaction" started.
+Action.c(6): web_reg_find started  	[MsgId: MMSG-26355]
+Action.c(6): Registering web_reg_find was successful  	[MsgId: MMSG-26390]
+Action.c(9): web_add_auto_header("Accept") started  	[MsgId: MMSG-26355]
+Action.c(9): web_add_auto_header("Accept") was successful  	[MsgId: MMSG-26392]
+Action.c(12): web_add_header("User-Agent") started  	[MsgId: MMSG-26355]
+Action.c(12): web_add_header("User-Agent") was successful  	[MsgId: MMSG-26392]
+Action.c(15): web_url("www.asdf.com") started  	[MsgId: MMSG-26355]
+Action.c(15): Found resource "http://www.asdf.com/89asdf.gif" in HTML "http://www.asdf.com/"  	[MsgId: MMSG-26659]
+Action.c(15): Found resource "http://www.google.com/images/poweredby_transparent/poweredby_000000.gif" in HTML "http://www.asdf.com/"  	[MsgId: MMSG-26659]
+Action.c(15): Registered web_reg_find successful for "Text=asdf" (count=9)  	[MsgId: MMSG-26364]
+Action.c(15): web_url("www.asdf.com") was successful, 10813 body bytes, 944 header bytes  	[MsgId: MMSG-26386]
+Action.c(24): Notify: Transaction "1_transaction" ended with a "Pass" status (Duration: 0.2388 Wasted Time: 0.0747).
+Ending action Action.
+Ending iteration 1.
+Ending Vuser...
+Starting action vuser_end.
+Ending action vuser_end.
+Vuser Terminated.
