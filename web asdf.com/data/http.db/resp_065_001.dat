@@ -1,0 +1,108 @@
+# Filename: messages.properties
+# Description: Common message properties for HPUI HPE library.  Uses
+# Java .properties format and ResourceBundle file tagging conventions
+# (base file is untagged, and localized files are tagged by language
+# "messages_<lc>.properties" or language/country
+# "messages_<lc>_<CC>.properties").
+#####
+#
+# tabs
+#
+tabs_screenreader = This is a tab. Use the arrow keys to navigate through the tabs.
+#
+# datepicker (or should we put this in jquery.ui.datepicker-*.js files?)
+#
+datepicker_screenreader = (activate to select a date)
+#
+# empty shopping cart (title is deliberately blank)
+#
+empty_shoppingcart_screenreader = No items in your cart
+empty_shoppingcart_disabled_screenreader = Your cart is disabled. No items in your cart.
+empty_shoppingcart_title = 
+#
+# non-empty shopping cart (title is deliberately blank)
+#
+non_empty_shoppingcart_screenreader = Items in your cart:
+non_empty_shoppingcart_disabled_screenreader = Your cart is disabled. Items in your cart:
+non_empty_shoppingcart_title = 
+#
+# links
+#
+link_disabled_screenreader = (disabled)
+tooltip_screenreader = (opens a tooltip in a new layer)
+tooltip_title = More information
+#
+# contextual help
+#
+contextual_help_screenreader = (opens help in a new layer)
+contextual_help_title = More information
+#
+# callout
+#
+callout_screenreader = (opens more content in a new layer)
+callout_title = Attention
+#
+# disclosure, expand/collapse list or button
+#
+expand_screenreader = Expand section
+collapse_screenreader = Collapse section
+expand_all_screenreader	= Expand all
+collapse_all_screenreader = Collapse all
+#
+# icons
+#
+icon_preloader_screenreader = Please wait
+icon_print_screenreader = Print
+icon_share_screenreader = Share
+icon_subscribe_screenreader = Subscribe
+icon_standalone_OK_screenreader = Status - OK
+icon_standalone_error_screenreader = Status - error
+icon_info_screenreader = More information
+icon_help_screenreader = Help
+icon_OK_screenreader = OK
+icon_unknown_screenreader = Unknown
+icon_error_screenreader = Error
+icon_warn_screenreader = Attention
+icon_calendar_screenreader = Select a date
+icon_settings_screenreader = Settings
+icon_refresh_screenreader = Refresh
+icon_reports_screenreader = Reports
+icon_forum_screenreader = Forums
+icon_service_screenreader = Service
+icon_chat_screenreader = Chat
+icon_mail_screenreader = Email
+icon_contact_screenreader = Contact
+icon_download_screenreader = Download
+#
+# checkboxes
+#
+checkbox_off_screenreader = (unselected checkbox, activate to select)
+checkbox_on_screenreader = (selected checkbox, activate to unselect)
+checkbox_off_disabled_screenreader = (unselected checkbox)
+checkbox_on_disabled_screenreader = (selected checkbox)
+checkbox_off_readonly_screenreader = (unselected checkbox) (readonly)
+checkbox_on_readonly_screenreader = (selected checkbox) (readonly)
+#
+# radio buttons
+#
+radio_off_screenreader = (unselected radio button, activate to select)
+radio_on_screenreader = (selected radio button)
+radio_off_disabled_screenreader = (unselected radio button)
+radio_on_disabled_screenreader = (selected radio button)
+radio_off_readonly_screenreader = (unselected radio button) (readonly)
+radio_on_readonly_screenreader = (selected radio button) (readonly)
+#
+# file inputs
+#
+file_screenreader = (activate to select a file to upload)
+file_disabled_screenreader = (file upload disabled)
+file_entered_screenreader = (file selected: {0})
+file_hint_screenreader = ({0})
+#
+# dropdowns
+#
+dropdown_actionmenu_screenreader = Action menu
+dropdown_linkmenu_screenreader = Link menu
+dropdown_single_multi_select_screenreader = Option menu
+dropdown_sortselect_screenreader = Sort menu
+dropdown_filterselect_screenreader = Filter menu

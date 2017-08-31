@@ -1,0 +1,5 @@
+# Filename: messages_en.properties
+# Description: Dummy file to satisfy JQuery I18N properties plugin in the English
+# case.  Actual English message properties are defined in the base file
+# (messages.properties) so they can serve as defaults for all locales.
+#####

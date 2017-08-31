@@ -1,0 +1,319 @@
+/* 
+	HPE Sortable Tables - The implementation is done using http://www.datatables.net/.
+	Some of the class name are applied by JS file. Hence we cannot rename them.
+	You can also find some of the unused classes which are not applicable in current HPE design.
+*/
+
+/*
+ * Table wrapper
+ */
+.dataTables_wrapper {
+	position: relative;
+	clear: both;
+	*zoom: 1;
+	padding-top: 5px;
+}
+
+/*
+ * Page length menu. Not used in HPE
+ */
+.dataTables_length {
+	float: left;
+}
+
+/*
+ * Filter. Not used in HPE
+ */
+.dataTables_filter {
+	float: right;
+	text-align: right;
+}
+
+/*
+ * Table information
+ */
+.dataTables_info {
+	clear: both;
+	float: left;
+	font-family: "HP Simplified", Arial;
+	font-weight: normal;
+	font-size: 14px;
+	color: #000000;
+	text-align: right;
+	height: 26px;
+	/*width: 190px;*/
+	padding-right: 10px;
+	padding-bottom: 18px;
+}
+
+/*
+ * Pagination
+ */
+.dataTables_paginate {
+	float: left;
+	text-align: right;
+}
+
+/* Two button pagination - previous / next . Not used in HPE*/
+.paginate_disabled_previous,
+.paginate_enabled_previous,
+.paginate_disabled_next,
+.paginate_enabled_next {
+	float: left;
+	cursor: pointer;
+	*cursor: hand;
+	color: #111 !important;
+	background: url('../images/pagination_icons.png') no-repeat center;
+	width: 19px; 
+	height: 19px;
+}
+.paginate_disabled_previous:hover,
+.paginate_enabled_previous:hover,
+.paginate_disabled_next:hover,
+.paginate_enabled_next:hover {
+	text-decoration: none !important;
+}
+.paginate_disabled_previous:active,
+.paginate_enabled_previous:active,
+.paginate_disabled_next:active,
+.paginate_enabled_next:active {
+	outline: none;
+}
+.paginate_disabled_previous,
+.paginate_disabled_next {
+	color: #666 !important;
+}
+.paginate_disabled_previous,
+.paginate_enabled_previous {
+	padding-left: 23px;
+}
+.paginate_disabled_next,
+.paginate_enabled_next {
+	padding-right: 23px;
+	margin-left: 10px;
+}
+.paginate_enabled_previous { background-position: 0 -69px; }
+.paginate_enabled_previous:hover { background-position: 0 -138px; }
+.paginate_disabled_previous { background-position: 0 0; }
+.paginate_enabled_next { background-position: 0 -276px; }
+.paginate_enabled_next:hover { background-position: 0 -345px; }
+.paginate_disabled_next { background-position: 0 -207px; }
+
+/* Full number pagination */
+.paging_full_numbers {
+	height: 26px;
+	font-family: "HP Simplified", Arial;
+	font-weight: bold;
+	font-size: 14px;
+	color: #000000;
+	text-align: center;
+	
+}
+.paging_full_numbers a:active {
+	outline: none
+}
+.paging_full_numbers a:hover {
+	text-decoration: none;
+}
+.paging_full_numbers a.paginate_button,
+.paging_full_numbers a.paginate_active {
+	border: 2px solid #CCCCCC;
+	padding: 1px 5px;
+	margin: 0 1px;
+	cursor: pointer;
+	color: #5A5A5A;
+	*cursor: hand;
+}
+.paging_full_numbers a.paginate_button {
+	background-color: #FFFFFF;
+}
+.paging_full_numbers a.paginate_button:hover {
+	background-color: #FFFFFF;
+	text-decoration: none !important;
+	border: 2px solid #767676;
+	color: #0096D6;
+}
+.paging_full_numbers a.paginate_active {
+	background-color: #FFFFFF;
+	color: #0096D6;
+	border: 2px solid #5A5A5A;
+}
+.paging_full_numbers a.paginate_active:hover {
+	text-decoration: none !important;
+}
+
+/*
+ * Processing indicator
+ */
+.dataTables_processing {
+	background-image: url('../images/HPE_animated_small_blue_gray.gif');
+	background-repeat: no-repeat;
+	background-position: center;
+	float: left;
+	height: 32px;
+	width: 32px;
+	margin-left: 10px;
+	margin-top: -7px;
+	text-indent: -99999px;
+}
+.dataTables_customProcessing {
+	float: left;
+	margin-left: 10px;
+}
+/* **
+.dataTables_processing {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 60px;	
+	height: 60px;	
+	margin-left: -30px;
+	margin-top: -30px;
+	background-image: url('../images/HPE_animated_large_blue_gray.gif');
+	background-repeat: no-repeat;
+	background-position: center;
+	text-indent: -99999px;
+}
+** */
+
+/*
+ * Sorting
+ */
+.sorting { 
+	background: url('../images/sort_both.png') no-repeat right bottom; 
+	background-color: #767676 !important;
+	cursor: pointer;	
+	padding: 13px 31px 13px 10px !important;
+}
+.sorting:hover {
+	text-decoration: underline;
+	background: url('../images/sort_asc.png') no-repeat right bottom; 
+	background-color: #5A5A5A; 
+}
+.sorting_asc { 
+	background: url('../images/sort_asc.png') no-repeat right bottom; 
+	background-color: #5A5A5A !important; 
+	cursor: pointer;
+	padding: 13px 31px 13px 10px !important;
+}
+.sorting_asc:hover{
+	text-decoration: underline;
+	background: url('../images/sort_desc.png') no-repeat right bottom; 
+	background-color: #5A5A5A; 
+}
+.sorting_desc { 
+	background: url('../images/sort_desc.png') no-repeat right bottom; 
+	background-color: #5A5A5A !important;
+	cursor: pointer;
+	padding: 13px 31px 13px 10px !important;
+}
+.sorting_desc:hover{
+	text-decoration: underline;
+	background: url('../images/sort_asc.png') no-repeat right bottom; 
+	background-color: #5A5A5A; 
+}
+.sorting_disabled{
+	background-color: #767676 !important; 
+	cursor : text !important;
+}
+.sorting_asc_disabled { 
+	background: url('../images/sort_asc_disabled.png') no-repeat right bottom; 
+	background-color: #767676 !important; 
+}
+.sorting_desc_disabled { 
+	background: url('../images/sort_desc_disabled.png') no-repeat right bottom; 
+	background-color: #767676 !important; 
+}
+
+/*
+ * Scrolling
+ */
+.dataTables_scroll {
+	clear: both;
+}
+
+.dataTables_scrollBody {
+	*margin-top: -1px;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Overriding the Next and Previous messages with Arrow icons.*/
+.next,
+.previous{
+	padding:1px 10px !important;
+	background: url('../images/pagination_icons.png') no-repeat center;
+	width: 19px; 
+	height: 19px;
+} 
+.next.paginate_button {	
+	background-position: 0 -276px;
+}
+.next.paginate_button:hover {
+	background-position: 0 -345px;
+}
+.next.paginate_button.paginate_button_disabled, 
+.next.paginate_button.paginate_button_disabled:hover {
+	background-position: 0 -207px;
+	border: 2px solid #CCCCCC;
+	background-color: #F2F2F2;
+	cursor: text;
+}
+.previous.paginate_button {
+	background-position: 0 -69px;
+}
+.previous.paginate_button:hover {
+	background-position: 0 -138px;
+}
+.previous.paginate_button.paginate_button_disabled,
+.previous.paginate_button.paginate_button_disabled:hover {
+	background-position: 0 0;
+	border: 2px solid #CCCCCC;
+	background-color: #F2F2F2;
+	cursor: text;
+}
+
+/*Styling for disabled first and last buttons*/
+.first.paginate_button.paginate_button_disabled,
+.first.paginate_button.paginate_button_disabled:hover {
+ 	border: 2px solid #CCCCCC;
+	background-color: #F2F2F2;
+	color:#CCCCCC;
+	cursor: text;
+}
+.last.paginate_button.paginate_button_disabled,
+.last.paginate_button.paginate_button_disabled:hover {
+ 	border: 2px solid #CCCCCC;
+	background-color: #F2F2F2;
+	color:#CCCCCC;
+	cursor: text;
+}
+
+/* View Button Styling */
+span.hpui-view-button {
+	background-color: #FFFFFF;
+	border: 2px solid #CCCCCC;
+	padding: 1px 5px;
+	margin: 0 1px;
+	cursor: pointer;
+	color: #5A5A5A;
+}
+span.hpui-view-button:hover {
+	background-color: #FFFFFF;
+	text-decoration: none !important;
+	border: 2px solid #767676;
+	color: #0096D6;
+}
+
+/* Automatic odd, even row styling by JQuery */
+table.hpui-standard-table > tbody > tr.odd > td,
+table.hpui-static-table > tbody > tr.odd > td,
+table.hpui-standard-table > tbody > tr.even > td,
+table.hpui-static-table > tbody > tr.even > td,
+table.hpui-standard-table.hpui-alternating-rows > tbody > tr.odd > td,
+table.hpui-static-table.hpui-alternating-rows > tbody > tr.odd > td { 
+	background-color: #FFFFFF; 
+}
+table.hpui-standard-table.hpui-alternating-rows > tbody > tr.even > td,
+table.hpui-static-table.hpui-alternating-rows > tbody > tr.even > td { 
+	background-color: #F2F2F2; 
+}

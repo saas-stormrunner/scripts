@@ -1,0 +1,2888 @@
+var msBeautify = msBeautify || {};
+(function ($) {
+msBeautify = {
+	version: {msDropdown:'3.2'},
+	author: "Marghoob Suleman",
+	counter: 20,
+	debug: function (v) {
+		if (v !== false) {
+			$(".ddOutOfVision").css({height: 'auto', position: 'relative'});
+		} else {
+			$(".ddOutOfVision").css({height: '0px', position: 'absolute'});
+		}
+	},
+	oldDiv: '',
+	create: function (id, settings, type) {
+		type = type || "dropdown";
+		var data;
+		switch (type.toLowerCase()) {
+		case "dropdown":
+		case "select":
+			data = $(id).msDropdown(settings).data("dd");
+			break;
+		}
+		return data;
+	}
+};
+
+$.msDropDown = {};
+$.msDropdown = {};
+$.extend(true, $.msDropDown, msBeautify);
+$.extend(true, $.msDropdown, msBeautify);
+// make compatibiliy with old and new jquery
+if ($.fn.prop === undefined) {$.fn.prop = $.fn.attr;}
+if ($.fn.on === undefined) {$.fn.on = $.fn.bind;$.fn.off = $.fn.unbind;}
+if (typeof $.expr.createPseudo === 'function') {
+	//jQuery 1.8  or greater
+	$.expr[':'].Contains = $.expr.createPseudo(function (arg) {return function (elem) { return $(elem).text().toUpperCase().indexOf(arg.toUpperCase()) >= 0; }; });
+} else {
+	//lower version
+	$.expr[':'].Contains = function (a, i, m) {return $(a).text().toUpperCase().indexOf(m[3].toUpperCase()) >= 0; };
+}
+//dropdown class
+function dd(element, settings) {
+	var _settings = $.extend(true,{byJson: {data: null, selectedIndex: 0, name: null, size: 0, multiple: false, width: 250},
+		mainCSS: 'dd',
+		height: 120, //not using currently
+		visibleRows: 6,
+		rowHeight: 0,
+		showIcon: true,
+		zIndex: 9998,
+		useSprite: false,
+		// no slidedown animation for us
+		animStyle: 'none',
+		// animStyle: 'slideDown',
+		event:'click',
+		openDirection: 'auto', //auto || alwaysUp
+		jsonTitle: true,
+		style: '',
+		disabledOpacity: 0.7,
+		disabledOptionEvents: true,
+		childWidth:0,
+		enableCheckbox:false, //this needs to multiple or it will set element to multiple
+		checkboxNameSuffix:'_mscheck',
+		append:'',
+		prepend:'',
+		//enableFilterbox:true,
+		isTitleFixed:false, // When false, the title will not be changing with the current selected option.
+		on: {create: null,open: null,close: null,add: null,remove: null,change: null,blur: null,click: null,dblclick: null,mousemove: null,mouseover: null,mouseout: null,focus: null,mousedown: null,mouseup: null}
+		}, settings);								  
+	var _this = this; //this class	 
+	var _holderId = {postElementHolder: '_msddHolder', postID: '_msdd', postTitleContainerID: '_titleContainer', postTitleID: '_title',postDefaultTitleID: '_defaultTitle',postTitleTextID: '_titleText', postChildID: '_child'};
+	var _styles = {dd:_settings.mainCSS, errorCSS: 'hpui-error', ddTitle: 'ddTitle', arrow: 'arrow arrowoff', arrowTDCSS: 'arrowTD', ddChild: 'ddChild', ddTitleText: 'ddTitleText',disabled: 'disabled', enabled: 'enabled', ddOutOfVision: 'ddOutOfVision', borderTop: 'borderTop', noBorderTop: 'noBorderTop', selected: 'selected', divider: 'divider', optgroup: "optgroup", optgroupTitle: "optgroupTitle", /*description: "description",*/ label: "ddlabel",hover: 'hover',disabledAll: 'disabledAll',screenReaderCSS:'hpui-screenreader-text'};
+	var _styles_i = {li: '_msddli_',borderRadiusTp: 'borderRadiusTp1',ddChildMore: 'border shadow',fnone: "fnone"};
+	var _isList = false, _isMultiple=false,_isDisabled=false, _cacheElement = {}, _element, _orginial;
+	var _isOpenFlag=false; 		//whether the dropdown is expanded or collasped
+	var _isFilterBoxOpen=false;  //whether the filterbox is open or close
+	var _isScrollDown=false;	//whether scroll down or scroll up accroding to the space
+	var DOWN_ARROW = 40, UP_ARROW = 38, LEFT_ARROW=37, RIGHT_ARROW=39, ESCAPE = 27, ENTER = 13, ALPHABETS_START = 47, SHIFT=16 , CONTROL = 17 , TAB = 9;
+	var _shiftHolded=false, _controlHolded=false,_lastTarget=null,_forcedTrigger=false, _oldSelected, _isCreated = false;
+	var _doc = document;
+	var _currentOption=null; //when pressing character key to select an option, this represents the current selected one.
+	var menuTitleScreenReadingSpan=null; //the entry anchor element for menu type dropdowns
+	var visibleRowsContainerHeight = 0; //store the height of of visible rows' container' (i.e. the <UL>)
+	var isErrorStatusFlag = false;
+	var isClickFlag = false;
+	//if browser is ie8, before open dev tools, console is undefined
+	var console = window.console||{"log":function(){}};
+	
+	var _checkDataSetting = function() {
+		_settings.mainCSS = $("#"+_element).data("maincss") || _settings.mainCSS;
+		_settings.visibleRows = $("#"+_element).data("visiblerows") || _settings.visibleRows;
+		if($("#"+_element).data("showicon")==false) {_settings.showIcon = $("#"+_element).data("showicon");};
+		_settings.useSprite = $("#"+_element).data("usesprite") || _settings.useSprite;
+		_settings.animStyle = $("#"+_element).data("animstyle") || _settings.animStyle;
+		_settings.event = $("#"+_element).data("event") || _settings.event;
+		_settings.openDirection = $("#"+_element).data("opendirection") || _settings.openDirection;
+		_settings.jsonTitle = $("#"+_element).data("jsontitle") || _settings.jsonTitle;
+		_settings.disabledOpacity = $("#"+_element).data("disabledopacity") || _settings.disabledOpacity;
+		_settings.childWidth = $("#"+_element).data("childwidth") || _settings.childWidth;
+		_settings.enableCheckbox = $("#"+_element).data("enablecheckbox") || _settings.enableCheckbox;
+		_settings.checkboxNameSuffix = $("#"+_element).data("checkboxnamesuffix") || _settings.checkboxNameSuffix;
+		_settings.append = $("#"+_element).data("append") || _settings.append;
+		_settings.prepend = $("#"+_element).data("prepend") || _settings.prepend;		
+	};	
+	
+
+	var getElement = function(ele) {
+		if (_cacheElement[ele] === undefined) {
+			_cacheElement[ele] = _doc.getElementById(ele);
+		}
+		return _cacheElement[ele];
+	}; 	
+	var _getIndex = function(opt) {
+		var childid = _getPostID("postChildID"); 
+		return $("#"+childid + " li."+_styles_i.li).index(opt);
+	};
+	var _createByJson = function() {
+		if (_settings.byJson.data) {
+				var validData = [/*"description",*/"image",  "title"];
+				try {
+					if (!element.id) {
+						element.id = "dropdown"+msBeautify.counter;
+					};
+					_settings.byJson.data = eval(_settings.byJson.data);
+					//change element
+					var id = "msdropdown"+(msBeautify.counter++);
+					var obj = {};
+					obj.id = id;
+					obj.name = _settings.byJson.name || element.id; //its name
+					if (_settings.byJson.size>0) {
+						obj.size = _settings.byJson.size;
+					};
+					obj.multiple = _settings.byJson.multiple;					
+					var oSelect = _createElement("select", obj);
+					for(var i=0;i<_settings.byJson.data.length;i++) {
+						var current = _settings.byJson.data[i];
+						var opt = new Option(current.text, current.value);
+						for(var p in current) { 
+							if (p.toLowerCase() != 'text') { 
+								var key = ($.inArray(p.toLowerCase(), validData)!=-1) ? "data-" : "";
+								opt.setAttribute(key+p, current[p]);
+							};
+						};
+						oSelect.options[i] = opt;
+					};
+					getElement(element.id).appendChild(oSelect);
+					oSelect.selectedIndex = _settings.byJson.selectedIndex;
+					$(oSelect).css({width: _settings.byJson.width+'px'});
+					//now change element for access other things
+					element = oSelect;
+				} catch(e) {
+					throw "There is an error in json data.";
+				};
+		};			
+	};
+	var _construct = function() {		
+		 //set properties
+		 _createByJson();
+		if (!element.id) {
+			element.id = "msdrpdd"+(msBeautify.counter++);
+		};						
+		_element = element.id;
+		_this._element = _element;
+		_checkDataSetting();		
+		
+		if(_settings.isTitleFixed){
+			// Remove the disabled attribute for these reasons: 1. _settings.isTitleFixed is supposed to be only used for menu type of dropdowns,
+			// such as action menu, critical/primary/secondary link menu, etc. For these dropdowns, we don't support disabled state and there's no such need.
+			// 2. Later in the _createLayout function we set the invisible select element to disabled (for the reason see the
+			// comments below at the end of this function), it is working fine if the page load is always triggered by a forced refresh (e.g. Ctrl + F5).
+			// However after the page is loaded once and the invisible select has been changed to disabled by the code, and then user reloads
+			// the page via a normal refresh (F5), since the invisible select's state is remembered by the browser and it is disabled,
+			// our code will generate the visible menu structure in disabled state as well which causes problems... So since there is no need of
+			// support disabled state for the menu type of dropdowns, we now remove the disabled attribute every time when generating the dropdowns' structures
+			// and add it back after the generating complete.
+			//$(getElement(_element)).removeAttr('disabled');
+		}
+		
+		_isDisabled = getElement(_element).disabled;
+		if(!_isDisabled){
+			_isDisabled = ($(getElement(_element)).attr('readonly') == undefined)? false : true;
+		}
+		var useCheckbox = _settings.enableCheckbox;
+		if(Boolean(useCheckbox)===true) {
+			getElement(_element).multiple = true;
+			_settings.enableCheckbox = true;
+		};
+		_isList = (getElement(_element).size>1 || getElement(_element).multiple==true) ? true : false;
+		var orgClass = $(getElement(_element)).attr('class') || "";
+		//trace("_isList "+_isList);
+		if (_isList) {_isMultiple = getElement(_element).multiple;};			
+		_mergeAllProp();		
+		//create layout
+		_createLayout();
+		//set ui prop
+		getFirstChars();
+		_updateProp("uiData", _getDataAndUI());
+		_updateProp("selectedOptions", $("#"+_element +" option:selected"));				
+	 };	
+	 /********************************************************************************************/	
+	var _getPostID = function (id) {
+		return _element+_holderId[id];
+	};
+	var _getInternalStyle = function(ele) {		 
+		 var s = (ele.style === undefined) ? "" : ele.style.cssText;
+		 return s;
+	};
+	var _parseOption = function(opt) {
+		var imagePath = '', title ='', /*description='',*/ value=-1, text='', className='', imagecss = '', prefix = '';
+		if (opt !== undefined) {
+			var attrTitle = opt.title || "";
+			//data-title
+			if (attrTitle!="") {
+				var reg = /^\{.*\}$/;
+				var isJson = reg.test(attrTitle);
+				if (isJson && _settings.jsonTitle) {
+					var obj =  eval("["+attrTitle+"]");	
+				};				 
+				title = (isJson && _settings.jsonTitle) ? obj[0].title : title;
+				//description = (isJson && _settings.jsonTitle) ? obj[0].description : description;
+				imagePath = (isJson && _settings.jsonTitle) ? obj[0].image : "";
+				imagecss = (isJson && _settings.jsonTitle) ? obj[0].imagecss : imagecss;
+			};
+
+			text = opt.text || '';
+			value = opt.value || '';
+			className = opt.className || "";
+			prefix = $(opt).prop("data-label") || $(opt).data("label") || "";
+			if (prefix)
+				text = prefix + " " + text;
+			//ignore title attribute if playing with data tags			
+			title = $(opt).prop("data-title") || $(opt).data("title") || (title || "");
+			//description = $(opt).prop("data-description") || $(opt).data("description") || (description || "");
+			imagePath = $(opt).prop("data-image") || $(opt).data("image") || (imagePath || "");
+			imagecss = $(opt).prop("data-image-class") || $(opt).data("image-class") || (imagecss || "");
+			
+		};
+		var o = {image: imagePath, title: title, /*description: description,*/ value: value, text: text, className: className, imagecss:imagecss};
+		return o;
+	};	 
+	var _createElement = function(nm, attr, html) {
+		var tag = _doc.createElement(nm);
+		if (attr) {
+		 for(var i in attr) {
+			 switch(i) {
+			 	 case "onclick":
+			 		$(tag).attr('onclick', attr[i]);
+			 	 break;
+				 case "style":
+					tag.style.cssText  = attr[i];
+				 break;
+				 case "tabindex":
+					 $(tag).attr('tabindex', attr[i]);
+				 break;
+				 default:
+					tag[i]  = attr[i];
+				 break;
+			 };	
+		 };
+		};
+		if (html) {
+		 tag.innerHTML = html;
+		};
+		return tag;
+	};
+	 /********************************************************************************************/
+	  /*********************** <layout> *************************************/
+	var _hideOriginal = function() {
+		var hidid = _getPostID("postElementHolder");
+		if ($("#"+hidid).length==0) {			 
+			var obj = {style: 'height: 0px;overflow: hidden;position: absolute;',className: _styles.ddOutOfVision};	
+			obj.id = hidid;
+			var oDiv = _createElement("div", obj);	
+			$("#"+_element).after(oDiv);
+			$("#"+_element).appendTo($("#"+hidid));
+		} else {
+			$("#"+hidid).css({height: 0,overflow: 'hidden',position: 'absolute'});
+		};
+	};
+	var _createWrapper = function () {
+		var obj = {
+			className: _styles.dd + " ddcommon borderRadius",
+			style: ""
+		};
+		var styles = _getInternalStyle(getElement(_element));
+		//var w = $("#" + _element).outerWidth();
+		//obj.style = "width: " + w + "px;";
+		if (styles.length > 0) {
+			obj.style = obj.style + "" + styles;
+		};
+		if(_isMultiple) {
+			var allOptions = getElement(_element).children;
+			var anyOptionSelected = false;
+			for (var i = 0; i < allOptions.length; i++) {
+				var current = allOptions[i];
+				if(current.selected) {
+					anyOptionSelected = true;
+					break;
+				}
+			}
+			if(!anyOptionSelected) {
+				obj.className = obj.className + " " + 'default';
+			}
+		}
+		obj.id = _getPostID("postID");
+		if(_settings.isTitleFixed){
+			//obj.tabindex = "0";
+		}
+		var oDiv = _createElement("div", obj);
+		
+		return oDiv;
+	};
+	var _createTitle = function () {
+		var selectedOption;
+		if(getElement(_element).selectedIndex>=0) {
+			selectedOption = getElement(_element).options[getElement(_element).selectedIndex];
+		} else {
+			selectedOption = {value:'', text:''};
+		}
+		var spriteClass = "", selectedClass = "";
+		//check sprite
+		var useSprite = $("#"+_element).data("usesprite");
+		if(useSprite) { _settings.useSprite = useSprite; };
+		if (_settings.useSprite != false) {
+			spriteClass = " " + _settings.useSprite;
+			selectedClass = " " + selectedOption.className;
+		};
+		
+		// added by peiqing
+		var allOptions = getElement(_element).children;
+		var anyOptionSelected = false;
+		var preSelectTitleClass = _styles.ddTitle;
+		for (var i = 0; i < allOptions.length; i++) {
+			var current = allOptions[i];
+			if($(current).hasClass('hpui-heading')){
+				continue;
+			} else {
+				if(!anyOptionSelected && $(current).attr('selected') != undefined){
+					anyOptionSelected = true;
+				}
+			};
+		};
+		
+		if(!anyOptionSelected && !_isMultiple) {
+			preSelectTitleClass = 'ddTitlePreSelect';
+		}
+		// 
+		
+		var oTitle = _createElement("div", {className: preSelectTitleClass + spriteClass + " " + _styles_i.borderRadiusTp, id: _getPostID("postTitleContainerID")});
+		if(_settings.isTitleFixed) {
+			//add screen reader into heading box  for all select--- June		
+			var hpui_screen_reader_label_obj = $("label[for='"+ $("#" + _element).attr('id') +"']");
+			var hpui_screen_reader_label_text = hpui_screen_reader_label_obj.html();
+			//console.log("hpui_screen_reader_label_text:  "+hpui_screen_reader_label_text);		
+			if(hpui_screen_reader_label_text != undefined && hpui_screen_reader_label_obj != undefined) {
+				// Generate a span container for screenReader, and add it to the DOM.
+				var oScreenReader = _createElement("span", {className: _styles.screenReaderCSS});
+				$(oScreenReader).html(hpui_screen_reader_label_text);
+				oTitle.appendChild(oScreenReader);
+			}
+		}
+		//divider
+		var oDivider = _createElement("span", {className: _styles.divider});
+		//arrow
+		var oArrow = _createElement("span", {className: _styles.arrow});
+		//title Text
+		var titleid = _getPostID("postTitleID");
+		var oTitleText = _createElement("table", {className: _styles.ddTitleText + selectedClass, id: titleid});
+		var oTitleTextTr = _createElement("tr");
+		
+		var parsed = _parseOption(selectedOption);
+		var arrowPath = parsed.image;
+		var sText = parsed.text || "";		
+		if (arrowPath != "" && _settings.showIcon) {
+			var oIcon = _createElement("img");
+			oIcon.src = arrowPath;
+			if(parsed.imagecss!="") {
+				oIcon.className = parsed.imagecss+" ";
+			};
+		};
+		
+		var defaultTitleid = _getPostID("postDefaultTitleID");
+		//console.log('sText',sText);
+		var oTitleText_in = _createElement("td", {className: _styles.label, id: defaultTitleid}, sText);
+		oTitle.appendChild(oDivider);
+		
+		if (oIcon) {
+			oTitleText.appendChild(oIcon);
+		};
+		//oTitleText.appendChild(oTitleText_in);
+		oTitleTextTr.appendChild(oTitleText_in);
+		var oArrowTD = _createElement("td", {className: _styles.arrowTDCSS});
+		oArrowTD.appendChild(oArrow);
+		oTitleTextTr.appendChild(oArrowTD);
+		oTitleText.appendChild(oTitleTextTr);
+		
+		oTitle.appendChild(oTitleText);
+		//var oDescription = _createElement("td", {className: _styles.description}, parsed.description);
+		//oTitleText.appendChild(oDescription);
+		//oTitleTextTr.appendChild(oDescription);
+		
+		$(oTitle).hover(function (e) {
+			$(oDivider).removeClass('divider');
+			$(oDivider).addClass('dividerHover');
+		},function (e) {
+			$(oDivider).removeClass('dividerHover');
+			$(oDivider).addClass('divider');
+		});
+		return oTitle;
+	};
+	var _createFilterBox = function () {
+		var tid = _getPostID("postTitleTextID");
+		var sText = _createElement("input", {id: tid, type: 'text', value: '', autocomplete: 'off', className: 'text shadow borderRadius', style: 'display: none'});
+		return sText;
+	};
+	var _createChild = function (opt) {
+		var obj = {};
+		var styles = _getInternalStyle(opt);
+		if (styles.length > 0) {obj.style = styles; };
+		var css = (opt.disabled) ? _styles.disabled : _styles.enabled;
+		if(!_settings.isTitleFixed){
+			css = (opt.selected) ? (css + " " + _styles.selected) : css;
+		}
+		css = css + " " + _styles_i.li;
+		obj.className = css;
+		if (_settings.useSprite != false) {
+			obj.className = css + " " + opt.className;
+		};
+		var li = _createElement("li", obj);
+		if($(opt).hasClass('hpui-heading')) {
+			$(li).addClass('hpui-heading');
+			//add href="#" for the first option in link menu and action menu ------ added by June
+			if($(opt).attr("href") != "undefined") {
+				$(opt).attr("href", "#")
+			}
+		}
+		var prefix = $(opt).prop('data-label') || $(opt).data('label');
+		if(prefix != undefined) {
+			$(li).data('label', prefix);
+		}
+		if($(opt).attr('class') != undefined){
+			obj.className = css + " " + opt.className;
+			$(li).attr('class', obj.className);
+		}
+		var elementId = $(opt).attr('id')+"_child";
+		if($(opt).attr('id') != undefined){
+			$(li).attr('id', elementId);
+		}
+		var parsed = _parseOption(opt);
+		if (parsed.title != "") {
+			li.title = parsed.title;
+		};
+		var arrowPath = parsed.image;
+		if (_settings.showIcon) {
+			var oIcon;
+			if(arrowPath != "") {
+				oIcon = _createElement("img");
+				oIcon.src = arrowPath;
+			} else if(parsed.imagecss!=""){
+				//Link menu accessibility: generate them using <span> tag instead of <a> tag, to avoid ambiguity with screenreaders which would think the <a> tag was a link -- June
+				oIcon = _createElement("span");
+			}
+			if(parsed.imagecss!="") {
+				oIcon.className = parsed.imagecss+" ";
+			};
+		};
+		/*if (parsed.description != "") {
+			var oDescription = _createElement("span", {
+				className: _styles.description
+			}, parsed.description);
+		};*/
+		var sText = opt.text || "";
+		var optURL = $(opt).attr('href');
+		var optClickHandler = $(opt).attr('onclick');
+		var optDisabled = $(opt).attr('disabled');
+		if(optClickHandler && !optDisabled){
+			$(li).on('click', function(event){
+				// Stop further handling of this click event and close the
+				// dropdown; the timeout method will handle the rest.
+				event.stopImmediatePropagation();
+				event.preventDefault();
+
+				// Need to run the onclick inside a timeout to avoid a timing
+				// race in some cases.
+				// Note: here we are applying the context to the visible
+				// heading DIV (i.e. whose id's suffix is '_msdd') instead of the invisible option element,
+				// which means the 'this' object refers to the DIV rather than the OPTION. This is necessary
+				// because in some cases the custom click handlers need to perform some actions based on
+				// the position of the HTML element of the context object. If the context object is hidden,
+				// there will be some problem with getting its position. So we are applying the context to an element
+				// which is alway visible. Since the context is changed the feature developers
+				// should be told to not use 'this' object in the custom click handler as far as possible.
+				setTimeout(jQuery.proxy(
+					function() {
+						var proceed = eval(optClickHandler);
+						// If the onclick handler returned true, open the href.
+						if (proceed && optURL)
+							window.location.assign(optURL);
+						_close(this);
+					}, jQuery('#'+_getPostID("postID")))
+				);
+
+			}); 
+		}
+		//console.log('optClickHandler',optClickHandler);
+		var oTitleText;
+		//TODO If screen reader text for option is not specified we should display the default localized text.
+		/*var oScreenReaderText = null;*/
+		//Action menu and link menu: for each individual generated list-item: use <a> tag (not <span> tag) for the option text --- June
+		if(_settings.isTitleFixed || (optURL != undefined && optURL != "")) { 		
+			oTitleText = _createElement("a", {
+				className: _styles.label,
+				href: optURL
+			}, sText);
+			//Remove the default "option" screenreader spans that are generated today	--- June
+			/*oScreenReaderText = _createElement("span", {
+				className: _styles.screenReaderCSS
+			}, $(opt).attr('title') || ($(opt).attr('disabled')?"disabled option":"option"));*/
+		} else {
+			oTitleText = _createElement("span", {
+				className: _styles.label
+			}, sText);
+		}
+		//checkbox
+		if(_settings.enableCheckbox===true) {
+			var chkbox = _createElement("input", {
+			type: 'checkbox', name:_element+_settings.checkboxNameSuffix+'[]', value:opt.value||""}); //this can be used for future
+			li.appendChild(chkbox);
+			if(_settings.enableCheckbox===true) {
+				chkbox.checked = (opt.selected) ? true : false;
+			};
+		};
+		if (oIcon) {
+			li.appendChild(oIcon);
+		};
+		li.appendChild(oTitleText);
+		/*if(oScreenReaderText != null) {
+			li.appendChild(oScreenReaderText);
+		}*/
+		/*if (oDescription) {
+			li.appendChild(oDescription);
+		} else {*/
+			if (oIcon) {
+				oIcon.className = oIcon.className+_styles_i.fnone;
+			};
+		//};
+		var oClear = _createElement("div", {className: 'clear'});
+		li.appendChild(oClear);
+		return li;
+	};
+	var _createChildren = function () {
+		var childid = _getPostID("postChildID");
+		var obj = {className: _styles.ddChild + " ddchild_ " + _styles_i.ddChildMore, id: childid};
+		if (_isList == false) {
+			obj.style = "z-index: " + _settings.zIndex;
+		} else {
+			obj.style = "z-index:1";
+		};
+		var childWidth = $("#"+_element).data("childwidth") || _settings.childWidth;
+		if(childWidth) {
+			obj.style =  (obj.style || "") + ";width:"+childWidth;
+		};		
+		var oDiv = _createElement("div", obj);
+		var ul = _createElement("ul");
+		if (_settings.useSprite != false) {
+			ul.className = _settings.useSprite;
+		};
+		var allOptions = getElement(_element).children;
+		for (var i = 0; i < allOptions.length; i++) {
+			var current = allOptions[i];
+			var li;
+			if (current.nodeName.toLowerCase() == "optgroup") {
+				//create ul
+				li = _createElement("li", {className: _styles.optgroup});
+				var div = _createElement("div", {className: _styles.optgroupTitle}, current.label);
+				li.appendChild(div);
+				var optChildren = current.children;
+				var optul = _createElement("ul");
+				for (var j = 0; j < optChildren.length; j++) {
+					var opt_li = _createChild(optChildren[j]);
+					optul.appendChild(opt_li);
+				};
+				li.appendChild(optul);
+			} else {
+				li = _createChild(current);
+			};
+			ul.appendChild(li);
+		};
+		//Since :last-child doesn't work in IE8, so add this style for last option in IE8 ---- add by June
+		if ((typeof(getInternetExplorerVersion) == 'function') && (getInternetExplorerVersion() === 8)) {
+			var ULChildrenLength= $(ul).children().length;
+			$(ul.childNodes[ULChildrenLength-1]).css("border-bottom-width","0px");
+		}
+		oDiv.appendChild(ul);		
+		return oDiv;
+	};
+	var _childHeight = function (val) {
+		var childid = _getPostID("postChildID");
+		var borderWidth = 1;
+		if (val) {
+			if (val == -1) { //auto
+				$("#"+childid).css({height: "auto", overflow: "auto"});
+				var test = $("#"+childid).height()+borderWidth;
+				if(_isScrollDown){
+					//$("#"+childid).css("top", test+"px");
+				}else {
+					test = "-"+test;
+					$("#"+childid).css("top", test+"px");
+				}
+			} else {				
+				$("#"+childid).css("height", val+"px");
+			};
+			return val;
+		};
+		//else return height
+		var iHeight;
+		if (getElement(_element).options.length > 0) {
+			if(getElement(_element).options.length < _settings.visibleRows){
+				if($(getElement(_element).options[0]).hasClass('hpui-heading')){
+					_settings.visibleRows = getElement(_element).options.length - 1;
+				}else{
+					_settings.visibleRows = getElement(_element).options.length;
+				}
+			} else if (getElement(_element).options.length === _settings.visibleRows && $(getElement(_element).options[0]).hasClass('hpui-heading')){
+				_settings.visibleRows = getElement(_element).options.length - 1;
+			}
+			var margin = parseInt($("#" + childid + " li:first").css("padding-bottom")) + parseInt($("#" + childid + " li:first").css("padding-top"));
+			//var border = parseInt($("#" + childid + " li._msddli_:first").css("border-bottom"));
+			var everyRowHeight;
+			if(_settings.rowHeight==0) {
+				$("#" + childid).css({visibility:'hidden',display:'block'}); //hack for first child
+				visibleRowsContainerHeight = $("#" + childid + " ul").height();
+				if($(getElement(_element).options[0]).hasClass('hpui-heading')){
+					for(var i = 1; i <= _settings.visibleRows; i++){
+						everyRowHeight = $($("#" + childid + " li")[i]).height();
+						_settings.rowHeight = _settings.rowHeight + everyRowHeight;
+					}
+				}else{
+					for(var i = 0; i < _settings.visibleRows; i++){
+						everyRowHeight = $($("#" + childid + " li")[i]).height();
+						_settings.rowHeight = _settings.rowHeight + everyRowHeight;
+					}
+				}			
+				$("#" + childid).css({visibility:'visible'});
+				if(!_isList || _settings.enableCheckbox===true) {
+					$("#" + childid).css({display:'none'});
+				};
+			};
+			// While calculating the total height of visible options, the border of the last option should be excluded, otherwise
+			// there will be white-space (actually it is the bottom border of the option) visible at the end of each dropdown
+			// when expanded and hover (or select) the last option.
+			var visibleRowsTotalHeight = (margin * _settings.visibleRows) + _settings.rowHeight + (_settings.visibleRows - 1) * borderWidth;
+			if(visibleRowsContainerHeight <= visibleRowsTotalHeight){
+				iHeight = visibleRowsContainerHeight;
+			} else {
+				iHeight = visibleRowsTotalHeight;
+			}
+		} else if (_isList) {
+			iHeight = $("#" + _element).height() //get height from original element
+		};		
+		return iHeight;
+	};
+	
+	var _toggleClassName = function (el, className, on) {
+		if (on == undefined) {
+			on = $(el).hasClass(className) ? false : true;
+		}
+		if (on) {
+			el.addClass(className);
+		} else {
+			el.removeClass(className);
+		}
+	}
+	
+	var _applyChildEvents = function () {
+		var id = _getPostID("postID");
+		var el = $("#"+id).parent();
+		var childid = _getPostID("postChildID");
+		$("#" + childid).on("click", function (e) {
+			if (_isDisabled === true) return;
+			//prevent body click
+			if (!_isMultiple) {
+				e.preventDefault();
+				e.stopPropagation();
+			} else {
+				$('#' + _element).trigger("focus");
+			};
+		});
+		
+		$("#" + childid + " li." + _styles.enabled).on("blur", function (e) {
+			if (_isDisabled === true) return false;
+			$(this).removeClass(_styles.hover);
+		});
+		$("#" + childid + " li." + _styles.enabled).on("click", function (e) {
+			var nodeName = e.target.nodeName.toLowerCase();
+			//console.log("applyChildEvent method---nodeName value--" +nodeName );
+			var oDropdown = $("#" + _element).data("dd");
+			if(nodeName == "a") {
+				if(_settings.isTitleFixed) {
+					oDropdown.set("selectedIndex", 0);
+				}
+				//window.location = e.target;
+				window.location.assign($(e.target).parent().find("a.ddlabel").attr('href'));
+			} else if ($(e.target).children("a").length > 0) {
+				if(_settings.isTitleFixed) {					
+					oDropdown.set("selectedIndex", 0);
+				}
+				//window.location = $(e.target).children("a")[0];
+				window.location.assign($(e.target).find('a.ddlabel').attr('href'));
+			} else if(nodeName == 'span'){
+				//for tileFixed select  -- By June				
+				if(_settings.isTitleFixed) {
+					oDropdown.set("selectedIndex", 0);
+					window.location.assign($(e.target).parent().find("a.ddlabel").attr('href'));
+				}
+			}
+			// else if(nodeName !== "input") {
+			// 	//console.log("applyChildEvent method invoke _close method");
+			// 	_close(this);
+			// };
+			_close(this);
+		});
+		
+		//when mouse over, register keydown event(first click control key, then click the left key)
+		 /*if(_isList && _isMultiple){			
+		 	$("#" + childid + " li." + _styles.enabled).on("mouseover", function(evt) {
+		 		console.log("mouse over");
+		 		if(evt.ctrlKey || evt.shiftKey) {
+			 		console.log("evt.which:" +evt.which + "--evt.keyCode:" +evt.keyCode);
+                    _controlHolded = true;
+			 		$(document).off("keydown");
+			 		$(document).on("keydown", on_keydown);
+			 		$(document).off("keyup");
+			 		$(document).on("keyup", on_keyup);
+		 		}
+		 	});
+		 }*/
+		
+		$("#" + childid + " li." + _styles.enabled).on("mousedown", _select_item);
+		$("#" + childid + " li." + _styles.enabled).on("mouseenter", function (e) {
+			if (_isDisabled === true) return false;
+			e.preventDefault();
+			e.stopPropagation();
+			if (_lastTarget != null) {
+				if (_isMultiple) {
+					$(this).addClass(_styles.selected);
+					if(_settings.enableCheckbox===true) {
+						this.childNodes[0].checked = true;
+					};
+				};
+			};
+		});
+
+		$("#" + childid + " li." + _styles.enabled).on("mouseover", function (e) {
+			if (_isDisabled === true) return false;
+			$(this).addClass(_styles.hover);
+		});
+		$("#" + childid + " li." + _styles.enabled).on("mouseout", function (e) {
+			if (_isDisabled === true) return false;
+			$("#" + childid + " li." + _styles.hover).removeClass(_styles.hover);
+		});
+
+		$("#" + childid + " li." + _styles.enabled).on("mouseup", function (e) {
+			if (_isDisabled === true) return false;
+			e.preventDefault();
+			e.stopPropagation();
+			if(_settings.enableCheckbox===true) {
+				_controlHolded = false;
+			};
+			var selected = $("#" + childid + " li." + _styles.selected).length;			
+			_forcedTrigger = (_oldSelected.length != selected || selected == 0) ? true : false;	
+			_fireAfterItemClicked();
+			//console.log("mouseup event-- trigger focus event");
+			//_unbind_on_events(); //remove old one
+			//_bind_on_events();
+			_lastTarget = null;
+			//_close();
+			$("#" + _element).focus();
+		});
+		/* options events */
+		if (_settings.disabledOptionEvents == false) {
+			$("#" + childid + " li." + _styles_i.li).on("click", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "click");
+			});
+			$("#" + childid + " li." + _styles_i.li).on("mouseenter", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "mouseenter");
+			});
+			$("#" + childid + " li." + _styles_i.li).on("mouseover", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "mouseover");
+			});
+			$("#" + childid + " li." + _styles_i.li).on("mouseout", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "mouseout");
+			});
+			$("#" + childid + " li." + _styles_i.li).on("mousedown", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "mousedown");
+			});
+			$("#" + childid + " li." + _styles_i.li).on("mouseup", function (e) {
+				if (_isDisabled === true) return false;
+				fireOptionEventIfExist(this, "mouseup");
+			});
+		};
+	};
+	
+	var _select_item = function (e) {		
+		//console.log("start  _select_item----");		
+		var childid = _getPostID("postChildID");
+		var id = _getPostID("postID");
+		if (_isDisabled === true) return ;
+		_oldSelected = $("#" + childid + " li." + _styles.selected);
+		_lastTarget = this;
+		e.preventDefault();
+		e.stopPropagation();
+		//select current input
+		if(_settings.enableCheckbox===true) {
+			if(e.target.nodeName.toLowerCase() === "input") {
+				_controlHolded = true;
+			};	
+		};
+		if (_isList === true) {
+			if (_isMultiple) {	
+				//when click the error option.
+				//isClickFlag = true;
+				//when use ctrl+click, _controlHolded is true		
+				if(e.ctrlKey) {
+					_controlHolded = true;
+				}
+				//when use shift+click, _controlHolded is true		
+				if(e.shiftKey) {
+					_shiftHolded = true;
+				}
+				if (_shiftHolded === true) {
+					$(this).addClass(_styles.selected);
+					var selected = $("#" + childid + " li." + _styles.selected);
+					var lastIndex = _getIndex(this);
+					if (selected.length > 1) {
+						var items = $("#" + childid + " li." + _styles_i.li);
+						var ind1 = _getIndex(selected[0]);
+						var ind2 = _getIndex(selected[1]);
+						if (lastIndex > ind2) {
+							ind1 = (lastIndex);
+							ind2 = ind2 + 1;
+						};
+						for (var i = Math.min(ind1, ind2); i <= Math.max(ind1, ind2); i++) {
+							var current = items[i];
+							if ($(current).hasClass(_styles.enabled)) {
+								$(current).addClass(_styles.selected);
+							};
+						};
+					};
+				} else if (_controlHolded === true) {
+					var flag = $(this).hasClass(_styles.errorCSS, _styles.selected);					
+					if(flag) {
+						$(this).removeClass(_styles.errorCSS).removeClass(_styles.selected);
+						$($("#"+_element).children()[_getIndex($(this))]).removeClass(_styles.errorCSS);
+						$("#"+_element).children()[_getIndex($(this))].selected = false;
+						//other options have error class, so the border error css can't be removed
+						var hasOtherOptionErrorFlag = $("#"+childid+" li."+_styles_i.li).hasClass(_styles.errorCSS);
+						if(!hasOtherOptionErrorFlag) {							
+							$("#" + id).parent().removeClass(_styles.errorCSS);
+							$("#"+_element).removeClass(_styles.errorCSS);
+						}
+						//console.log("selected errorOpCSS----");
+					}else{
+						$("#"+_element).children()[_getIndex($(this))].selected = ($("#"+_element).children()[_getIndex($(this))].selected == true ? false : true);
+						$(this).toggleClass(_styles.selected);
+					}
+					if(_settings.enableCheckbox===true) {
+						var checkbox = this.childNodes[0];
+						checkbox.checked = !checkbox.checked; //toggle
+					};
+				} else {
+					isErrorStatusFlag = false;
+					var hasErrorFlag = $(this).hasClass(_styles.errorCSS);
+					// clear error from the div
+					$("#" + id).parent().removeClass(_styles.errorCSS);
+					// clear all errors from the li's
+					$("#" + childid + " li").removeClass(_styles.errorCSS);
+					// clear error from the select
+					$("#" + _element).removeClass(_styles.errorCSS);
+					// clear error from all the option's
+					$("#" + _element).children().removeClass(_styles.errorCSS);
+					// clear selected from all the selected li's
+					$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+					// clear selected from all the selected option's
+					$("#" + _element).children().removeClass(_styles.selected);
+					$("#" + childid + " input:checkbox").prop("checked", false);
+					// but if the clicked li was an error...
+					if(hasErrorFlag) {
+						// ...then revert to error on the div
+						$("#" + id).parent().addClass(_styles.errorCSS);						
+						// and revert to error on just this li
+						$(this).addClass(_styles.errorCSS);
+						// and revert to error on the select
+						$("#" + _element).addClass(_styles.errorCSS);
+						// and revert to error on just this option
+						$($("#" + _element).children()[_getIndex($(this))]).addClass(_styles.errorCSS);
+					}
+					// mark this li as selected
+					$(this).addClass(_styles.selected);
+					if(_settings.enableCheckbox===true) {
+						this.childNodes[0].checked = true;
+					};
+				};
+				
+				// Update the border style according to the selection.
+				var selected = $("#" + childid + " li." + _styles.selected);
+				
+				var mainDiv = $("#" + id);
+				if (selected.length >= 1) {
+					if(mainDiv.hasClass("default")){
+						mainDiv.removeClass("default");
+					}
+				} else {
+					if(!mainDiv.hasClass("default")){
+						mainDiv.addClass("default");
+					}
+				}
+			} else {				
+				$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+				$(this).addClass(_styles.selected);
+				
+			};
+			//fire event on mouseup
+		} else {
+			var hidid = _getPostID("postElementHolder");
+			$("#" + hidid).children().removeClass(_styles.errorCSS);
+			$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+			if(!_settings.isTitleFixed){
+				$(this).addClass(_styles.selected);			
+			}
+		};
+		
+		//Still focus on select after selecting an item ---by leon
+		//$("#" + _element).focus();
+		//console.log("end_select_item----");
+	};
+	
+	var _removeChildEvents = function () {
+		var childid = _getPostID("postChildID");
+		$("#" + childid).off("click");
+		$("#" + childid + " li." + _styles.enabled).off("mouseenter");
+		$("#" + childid + " li." + _styles.enabled).off("click");
+		$("#" + childid + " li." + _styles.enabled).off("mouseover");
+		$("#" + childid + " li." + _styles.enabled).off("mouseout");
+		$("#" + childid + " li." + _styles.enabled).off("mousedown");
+		$("#" + childid + " li." + _styles.enabled).off("mouseup");
+	};
+	var _applyEvents = function () {
+		var id = _getPostID("postID");
+		var childid = _getPostID("postChildID");		
+		var titleContainerId = _getPostID("postTitleContainerID");
+		//Focus on event is added here ---by leon, select id is _element
+		if(_settings.isTitleFixed){
+			$("#" + id).on(_settings.event, function (e) {
+				if (_isDisabled === true) return false;
+				fireEventIfExist("click");
+				//prevent body click
+				//e.preventDefault();
+				//e.stopPropagation();
+				$("#" + _element).trigger("focus");
+				if($("#" + id).parent().hasClass("hpui-action-menu") && $("#" + titleContainerId).hasClass("focusBackColor")) {
+					$("#" + titleContainerId).removeClass("focusBackColor");
+				}
+				_open(e);
+			});
+			
+			$("#" + _element).on("focus", function (e) {
+				/*$(document).off("keydown", on_keydown);				
+				$(document).off("keydown", on_focus_keydown_when_title_fixed);*/
+				$(document).off("keydown");
+				$(document).on("keydown", on_focus_keydown);			
+				
+				$(document).off("keyup", on_keyup);
+				$(document).on("keyup", on_keyup);
+				if($("#" + id).parent().hasClass("hpui-primary-link-menu") || $("#" + id).parent().hasClass("hpui-critical-link-menu") 
+					|| $("#" + id).parent().hasClass("hpui-secondary-link-menu") || $("#" + id).parent().hasClass("hpui-action-menu")) {
+					$("#" + titleContainerId).addClass("focusBackColor");
+				}
+				//console.log("focus------_isOpenFlag---------------" + _isOpenFlag);
+				if((typeof(getInternetExplorerVersion) == 'function') && (getInternetExplorerVersion() > 0)) {
+					if(_isOpenFlag) {
+						$("#" + titleContainerId).removeClass("focusBackColor");
+					}
+				}
+				/*$(document).off("keydown", on_blur_keydown);*/
+			});
+			$("#" + _element).blur(function (e) {
+				//console.log("blur(function (e) { call _unbind_on_events();",e);
+				//$(document).off("keydown");
+				_unbind_on_events();
+
+				/*$(document).off("keydown", on_keydown);
+				//console.log("off keydown event");
+				$(document).off("keydown", on_focus_keydown_when_title_fixed);*/
+				$(document).on("keydown", on_blur_keydown);
+				//console.log("after blur:"+getElement(_element).selectedIndex);
+				//$("#" +id).removeClass("borderRadiusBtm borderRadiusTp").addClass("borderRadius");
+				//$("#"+id).find('div:first').css('z-index','1');
+				//_isOpenFlag=false;
+
+				if($("#" + id).parent().hasClass("hpui-primary-link-menu") || $("#" + id).parent().hasClass("hpui-critical-link-menu") 
+					|| $("#" + id).parent().hasClass("hpui-secondary-link-menu") || $("#" + id).parent().hasClass("hpui-action-menu")) {
+					$("#" + titleContainerId).removeClass("focusBackColor");
+				}
+			});
+		}else if(!_isMultiple){
+			$("#" + id).on(_settings.event, function (e) {
+				//console.log('visible div clicked');
+				if (_isDisabled === true) return;
+				fireEventIfExist("click");
+				//prevent body click
+				//e.preventDefault();
+				//e.stopPropagation();
+				$("#" + _element).trigger("focus");
+				/*if(_settings.event == 'click') {
+					isClickFlag = true;	
+				}	*/			
+				_open(e);
+			});
+			$("#" + _element).on("focus", function (e) {
+				//console.log('invisible select focused');
+				/*$(document).off("keydown", on_keydown);				
+				$(document).off("keydown", on_focus_keydown);*/
+				$(document).off("keydown");
+				$(document).on("keydown", on_focus_keydown);			
+				
+				$(document).off("keyup", on_keyup);
+				$(document).on("keyup", on_keyup);								
+				/*$(document).off("keydown", on_blur_keydown);*/				
+				/*$(document).off("keydown", on_blur_keydown);*/
+				//when no click  event
+				//if(!isClickFlag) {	
+					//if($("#" + id).parent().hasClass(_styles.errorCSS)) {
+						//isErrorStatusFlag = true;
+						if(!$("#" + id).parent().hasClass('hpui-filter-menu')) {						
+							$("#" + id + " .ddTitle").addClass("focusBorder");
+							$("#" + id + " .divider").addClass("focusBorderLeft");
+						}
+					//}
+					if($("#" + id).parent().hasClass('hpui-filter-menu')) {
+						$("#" + id).find("table td.ddlabel").addClass("focusUnderline");				
+					}else{						
+						//when non-selected select is focused
+						if($($("#" + id).children()[0]).hasClass('ddTitlePreSelect')) {	
+							// add black border color for this select
+							$($("#" + id).children()[0]).removeClass('ddTitlePreSelect').addClass(_styles.ddTitle);						
+						}
+					}
+				//}
+			});
+			$("#" + _element).blur(function (e) {
+				//console.log("invisible select blur",e);
+				//$(document).off("keydown");
+				_unbind_on_events();
+
+				/*$(document).off("keydown", on_keydown);
+				//console.log("off keydown event");
+				$(document).off("keydown", on_focus_keydown);*/
+				$(document).on("keydown", on_blur_keydown);
+				//console.log("after blur:"+getElement(_element).selectedIndex);
+				//when this select is unfocused, its border-color will be back. ---June
+				//if(!isClickFlag) {
+					if($("#" + id + " .ddTitle").hasClass("focusBorder")) {
+						$("#" + id + " .ddTitle").removeClass("focusBorder");
+					}
+					if($("#" + id + " .divider").hasClass("focusBorderLeft")) {
+						$("#" + id + " .divider").removeClass("focusBorderLeft");
+					}		
+					if($("#" + id).parent().hasClass('hpui-filter-menu')) {
+						$("#" + id).find("table td.ddlabel").removeClass("focusUnderline");
+					}
+					if($($("#" + childid + " li")[getElement(_element).selectedIndex]).hasClass("hpui-heading")) {
+						$($("#" + id).children()[0]).removeClass(_styles.ddTitle).addClass('ddTitlePreSelect');
+					}
+				//}
+				/*var index = getElement(_element).selectedIndex;
+				var opt = getElement(_element).options[index];
+				if($(opt).hasClass('hpui-heading')) {
+					$("#" + id).removeClass("borderRadiusBtm borderRadiusTp").addClass("borderRadius");
+				}
+				_isOpenFlag=false;*/
+			});
+			// Trigger to focus the first element, when the multiple select be focused. 
+		
+		}else{
+			$("#" + _element).on("focus",function(e){
+				//var hiddenSelect = $(this);
+				var options = $("#" + childid).find('li');
+				var focusOption = options.hasClass('selected');
+				//var oDropdown = $("#" + _element).data("dd");
+				if(focusOption){
+					$(focusOption).focus();
+				}
+				//_bind_on_events();
+				$(document).on("keyup", on_keyup);
+				$(document).on("keydown", on_focus_keydown);	
+				//when this select is focused,its border-color will be change to dark gray except it is non-error and selected. -- June
+				//console.log("focus isClickFlag:" +isClickFlag);
+				//if(!isClickFlag) {
+					if($("#" + id).parent().hasClass(_styles.errorCSS)) {
+						isErrorStatusFlag = true;
+						$("#" + childid).removeClass("border").addClass("focusBorder");
+					}	
+					if($("#" + id).hasClass('default')) {
+						$("#" + id).removeClass('default');
+					}
+				//}
+				/*else{
+					//when user click an error option, and then mouse out, the color of the multiple select should be red.
+					if($("#" + id).parent().hasClass(_styles.errorCSS) && $("#" + childid + " li").hasClass(_styles.errorCSS)) {
+						$("#" + childid).addClass("border");
+						$("#" + childid).removeClass("focusBorder");
+					}	
+					//when user click + ctrl key an selected option, and then mouse out, the color of the multiple select should be gray.
+					if(!$("#" + childid + " li").hasClass(_styles.selected)) {
+						$("#" + childid).addClass("border");
+						$("#" + childid).removeClass("focusBorder");
+						$("#" + id).addClass("default");
+					}
+				}*/
+				//console.log("isErrorStatusFlag:"+isErrorStatusFlag);
+			});
+			$("#" + _element).on("blur",function(e){
+				_unbind_on_events();
+				_shiftHolded = false;
+				_controlHolded = false;	
+				//console.log("multiple blur isClickFlag:" +isClickFlag +"---isErrorStatusFlag:" +isErrorStatusFlag);	
+				//when this select is unfocused, its border-color will be back. ---June
+				$("#" + childid).removeClass("focusBorder").addClass("border");
+				if(isErrorStatusFlag || ($("#" + childid + " li").hasClass(_styles.errorCSS) && $("#" + id).parent().hasClass(_styles.errorCSS))) {
+					//$("#" + childid).addClass("border");
+					$("#" + id).parent().addClass(_styles.errorCSS);
+				}else if(!isErrorStatusFlag){
+					$("#" + id).parent().removeClass(_styles.errorCSS);
+				}	
+				//when no option be selected, the color of the border should be gray.
+				if(!$("#" + childid + " li").hasClass(_styles.selected)) {
+					$("#" + id).addClass("default");
+				}
+			});
+
+			$("#" + _element).on("change",function(e){
+				isErrorStatusFlag = false;
+				var selectedIndex;	
+				var originalElement = $("#" + _element + " option:selected");
+				//console.log("length: --" + originalElement.length);
+				var options = $("#" + childid + " li");
+				if(originalElement.length != 0) {
+					options.removeClass(_styles.selected);
+				}
+				//alert("originalElement.length-----" + originalElement.length);
+				for(var i = 0; i < originalElement.length; i++) {
+					selectedIndex = $(originalElement[i]).index();
+					$(options[selectedIndex]).addClass("selected");
+				}
+				_updateSelectUIWhenFocus(selectedIndex);
+				/*if(!_isMultiple && !_isList) {
+					if(!_settings.isTitleFixed) {
+						_updateTitleUI(selectedIndex);
+					}
+					_scrollToIfNeeded($(options[selectedIndex]));*/
+					/*isErrorStatusFlag = false;
+					console.log("next ---" + isErrorStatusFlag);*/
+					/*if(!_settings.isTitleFixed && _isOpenFlag){
+						_adjustOpen();
+					}
+				}*/
+				
+			});
+		}
+		
+		_applyChildEvents();		
+		$("#" + id).on("dblclick", on_dblclick);
+		$("#" + id).on("mousemove", on_mousemove);
+		$("#" + id).on("mouseenter", on_mouseover);
+		$("#" + id).on("mouseleave", on_mouseout);
+		$("#" + id).on("mousedown", on_mousedown);
+		$("#" + id).on("mouseup", on_mouseup);
+	};
+	
+	var on_blur_keydown = function(evt) {
+		switch (evt.keyCode) {
+			case CONTROL:
+				_controlHolded = false;
+				//console.log("blur keydown--" + _controlHolded);
+				break;
+		};	
+	}	
+	
+	//after create
+	var _fixedForList = function () {
+		var id = _getPostID("postID");
+		var childid = _getPostID("postChildID");		
+		if (_isList === true && _settings.enableCheckbox===false) {
+			$("#" + id + " ." + _styles.ddTitle).hide();
+			$("#" + childid).css({display: 'block', position: 'relative'});
+			_childHeight(_childHeight()); //get and set height 
+			//_open();
+		} else {
+			if(_settings.enableCheckbox===false) {
+				_isMultiple = false; //set multiple off if this is not a list
+			};
+			$("#" + id + " ." + _styles.ddTitle).show();
+			$("#" + childid).css({display: 'none', position: 'absolute'});
+			//set value
+			var first = $("#" + childid + " li." + _styles.selected)[0];
+			$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+			var index = _getIndex($(first).addClass(_styles.selected));
+			_setValue(index);
+		};
+	};
+	var _fixedForDisabled = function () {
+		var id = _getPostID("postID");
+		var opc = (_isDisabled == true) ? _settings.disabledOpacity : 1;
+		if (_isDisabled === true) {
+			$("#" + id).addClass(_styles.disabledAll).removeClass("borderRadius");
+			
+		} else {
+			$("#" + id).removeClass(_styles.disabledAll);
+		};
+	};
+	var _fixedSomeUI = function () {
+		//auto filter
+		var tid = _getPostID("postTitleTextID");
+		/*if(_settings.enableFilterbox){
+			$("#" + tid).on("keyup", _applyFilters);
+			$("#" + tid).on("blur", _eliminateFilters);
+		}*/
+		//if is list
+		_fixedForList();
+		_fixedForDisabled();
+	};
+	var _createLayout = function () {		
+		var oDiv = _createWrapper();
+		//Remove the default "menu" screenreader spans that are generated today --- June
+		/*if(_settings.isTitleFixed){
+			
+			// TODO If the screen reading text is not specified we should provide default text
+			// and the default text should be localized.
+			var screenReadingText = $(getElement(_element)).attr('title') || "menu";
+			var obj = {
+					className: _styles.screenReaderCSS
+				};
+			menuTitleScreenReadingSpan = _createElement("span", obj, screenReadingText);
+			oDiv.appendChild(menuTitleScreenReadingSpan);
+		}*/
+		var oTitle = _createTitle();
+		oDiv.appendChild(oTitle);
+		
+		//auto filter box
+		//var oFilterBox = _createFilterBox();
+		//var oFilterBoxWidth = ($(oDiv).css('min-width') > $(oDiv).css('width'))? $(oDiv).css('min-width') : $(oDiv).css('width');
+		//oDiv.appendChild(oFilterBox);
+	
+		var oChildren = _createChildren();
+		oDiv.appendChild(oChildren);
+		
+		var orgClass = $(getElement(_element)).attr('class') || "";
+		var tmpObj = {
+			className: orgClass
+		};
+		//console.log('tmpObj',tmpObj);
+		var hpuiDiv = _createElement("div", tmpObj);
+		hpuiDiv.appendChild(oDiv);
+		
+		$("#" + _element).after(hpuiDiv);
+		_hideOriginal(); //hideOriginal
+		_fixedSomeUI();
+		_applyEvents();
+		
+		var childid = _getPostID("postChildID");
+		//append
+		if(_settings.append!='') {
+			$("#" + childid).append(_settings.append);
+		};
+		//prepend
+		if(_settings.prepend!='') {
+			$("#" + childid).prepend(_settings.prepend);
+		};		
+		if (typeof _settings.on.create == "function") {
+			_settings.on.create.apply(_this, arguments);
+		};
+		
+		if(_settings.isTitleFixed){
+			// _settings.isTitleFixed is supposed to be only used for menu type of dropdowns,
+			// such as action menu, critical/primary/secondary link menu, etc. For these dropdowns, 
+			// We registered event handlers on the menu title screen reading anchor so that the the invisible select element
+			// can and should be disabled, otherwise it will still be tab-indexed and able to be interacted via keyboard which
+			// should not happen.
+			//getElement(_element).disabled = 'disabled';
+		}
+		/*_unbind_on_events(); //remove old one
+		_bind_on_events();*/
+	};
+	var _selectMutipleOptions = function (bySelected) {
+		var childid = _getPostID("postChildID");
+		var selected = bySelected || $("#" + childid + " li." + _styles.selected); //bySelected or by argument
+		for (var i = 0; i < selected.length; i++) {
+			var ind = _getIndex(selected[i]);
+			getElement(_element).options[ind].selected = "selected";
+		};
+		_setValue(selected);
+	};
+	var _fireAfterItemClicked = function () {
+		var childid = _getPostID("postChildID");
+		var selected = $("#" + childid + " li." + _styles.selected);		
+		if (_isMultiple && (_shiftHolded || _controlHolded) || _forcedTrigger) {
+			//getElement(_element).selectedIndex = -1; //reset old
+		};
+		var index;
+		if (selected.length == 0) {
+			index = -1;
+		} else if (selected.length > 1) {
+			//selected multiple
+			_selectMutipleOptions(selected);
+			//index = $("#" + childid + " li." + _styles.selected);
+			
+		} else {
+			//if one selected
+			index = _getIndex($("#" + childid + " li." + _styles.selected));
+		};	
+		if ((getElement(_element).selectedIndex != index || _forcedTrigger) && selected.length<=1) {			
+			_forcedTrigger = false;			
+			var evt = has_handler("change");
+			var previousSelectedIndex = getElement(_element).selectedIndex;
+			getElement(_element).selectedIndex = index;	
+			_setValue(index);
+			//local
+			if (typeof _settings.on.change == "function") {
+				var d = _getDataAndUI();
+				_settings.on.change(d.data, d.ui);
+			};			
+			// Added by Pei-Qing ---
+			// Set status to OK if selected index is changed.
+			if(!_isMultiple && previousSelectedIndex != index){
+				//$(getElement(_element)).trigger('hpui-ok');
+				var id = _getPostID("postID");
+				$("#"+id).parent().removeClass(_styles.errorCSS);				
+			}
+			// ---
+			$("#" + _element).trigger("change");
+		};
+	};
+	var _setValue = function (index, byvalue) {
+		if (index !== undefined) {
+			var selectedIndex, value, selectedText;
+			if (index == -1) {
+				selectedIndex = -1;
+				value = "";
+				selectedText = "";
+				_updateTitleUI(-1);
+			} else {
+				//by index or byvalue
+				if (typeof index != "object") {
+					var opt = getElement(_element).options[index];
+					getElement(_element).selectedIndex = index;
+					selectedIndex = index;
+					value = _parseOption(opt);
+					selectedText = (index >= 0) ? getElement(_element).options[index].text : "";
+					_updateTitleUI(index, value);
+					value = value.value; //for bottom
+				} else {
+					//this is multiple or by option					
+					selectedIndex = (byvalue && byvalue.index) || getElement(_element).selectedIndex;
+					value = (byvalue && byvalue.value) || getElement(_element).value;
+					selectedText = (byvalue && byvalue.text) || getElement(_element).options[getElement(_element).selectedIndex].text || "";
+					_updateTitleUI(selectedIndex);
+				};
+			};
+			_updateProp("selectedIndex", selectedIndex);
+			_updateProp("value", value);
+			_updateProp("selectedText", selectedText);
+			_updateProp("children", getElement(_element).children);
+			_updateProp("uiData", _getDataAndUI());
+			_updateProp("selectedOptions", $("#" + _element + " option:selected"));
+		};
+	};
+	var has_handler = function (name) {
+		//True if a handler has been added in the html.
+		var evt = {byElement: false, byJQuery: false, hasEvent: false};
+		var obj = $("#" + _element);
+		//console.log(name)
+		try {
+			//console.log(obj.prop("on" + name) + " "+name);
+			if (obj.prop("on" + name) !== null) {
+				evt.hasEvent = true;
+				evt.byElement = true;
+			};
+		} catch(e) {
+			//console.log(e.message);
+		}
+		// True if a handler has been added using jQuery.
+		var evs;
+		if (typeof $._data == "function") { //1.8
+			evs = $._data(obj[0], "events");
+		} else {
+			evs = obj.data("events");
+		};
+		if (evs && evs[name]) {
+			evt.hasEvent = true;
+			evt.byJQuery = true;
+		};
+		return evt;
+	};
+	var _bind_on_events = function () {
+		//console.log('call _bind_on_events');
+		_unbind_on_events();
+		//console.log("adding some events");
+		//$("body").on("click", _close);
+		//bind more events		 
+		$(document).on("keydown", on_keydown);
+		$(document).on("keyup", on_keyup);
+		//focus will work on this	 		 
+	};
+	var _unbind_on_events = function () {
+		//console.log("removing some events");
+		//$("body").off("click", _close);
+		//bind more events
+		$(document).off("keydown");
+		$(document).off("keyup");
+	};
+	var _applyFilters = function () {
+		//console.log("applyFilters---------");
+		var childid = _getPostID("postChildID");
+		var tid = _getPostID("postTitleTextID");
+		var titleContainerId = _getPostID("postTitleContainerID");
+		//control the filter box's style, '10' is delegate for the padding-right's value.'2' is delegate for the border width of the dropdown
+		$("#"+tid).css({"width":$("#"+childid).width()-10,"height":$("#"+titleContainerId).height(),"top":"2px"});		
+		var sText = getElement(tid).value;
+		if (sText.length == 0) {
+			$("#" + childid + " li:hidden").each(function(index){
+				if($(this).hasClass('hpui-heading')) {
+					// Do nothing.
+				} else {
+					$(this).show();
+				}
+				
+			}); //show if hidden
+			_childHeight(_childHeight());
+			//scroll to the selected option
+			var items = $("#" + childid + " li." + _styles_i.li);
+			var selected = ($("#" + childid + " li." + _styles.selected).length == 0) ? items[0] : $("#" + childid + " li." + _styles.selected);
+			var index = items.index(selected);
+			_scrollToIfNeeded($(items[index]));
+			//hide filter box
+			_hideFilterBox();
+			//set the top value of the dropdown box 
+			_adjustOpen();
+		} else {
+			$("#" + childid + " li").hide();
+			//$("#" + childid + " li:Contains('" + sText + "')").show();	
+			$("#" + childid + " li").each(function(index) {
+				if($(this).hasClass('hpui-heading')) {
+					// Do nothing.
+				} else {
+					// Start with the text.
+					if($(this).text().toLowerCase().indexOf(sText.toLowerCase()) == 0) {
+						$(this).show();
+					}
+				}
+			});	
+			if ($("#" + childid + " li:visible").length <= _settings.visibleRows) {
+				_childHeight(-1); //set autoheight
+			};
+		};		
+		//console.log("_applyFilters ----_isFilterBoxOpen ----"+ _isFilterBoxOpen);
+	};
+	
+	var _eliminateFilters = function () {
+		var childid = _getPostID("postChildID");
+		var tid = _getPostID("postTitleTextID");
+
+		$("#" + childid + " li:hidden").each(function(index){
+			if($(this).hasClass('hpui-heading')) {
+				// Do nothing.
+			} else {
+				$(this).show();
+			}
+			
+		}); //show if hidden
+		_childHeight(_childHeight());
+	}
+	var _showFilterBox = function () {
+		_isFilterBoxOpen = true;
+		var tid = _getPostID("postTitleTextID");
+		if ($("#" + tid + ":hidden").length > 0 && _controlHolded == false) {
+			$("#" + tid + ":hidden").show().val("");
+			getElement(tid).focus();
+		};
+	};
+	var _hideFilterBox = function () {
+		_isFilterBoxOpen = false;
+		var tid = _getPostID("postTitleTextID");
+		if ($("#" + tid + ":visible").length > 0) {
+			$("#" + tid + ":visible").hide();
+			getElement(tid).blur();
+		};
+	};
+	
+	// Add two handlers to process keydown and keyup when focus on. ---by leon
+	var on_focus_keydown = function (evt) {
+		//console.log("focus keydown--_isOpenFlag" + _isOpenFlag);
+		//if(!_isList){
+			//console.log("focus keydown--came");
+			switch (evt.keyCode) {
+			case TAB:
+				_close();
+				break;
+			case ESCAPE:
+				_close();
+				break;
+			case ENTER:
+				if(!_isMultiple && !_isList) {
+					var id = _getPostID("postID");
+					var titleContainerId = _getPostID("postTitleContainerID");
+					if (_isDisabled === true) return false;
+					fireEventIfExist("click");
+					//Check whether the browser is Google Chrome. If true, use jQuery to prevent default events so that the single select (ddOutOfVision) doesn't open and thus it 
+					//will be still invisible. This is only needed for Chrome because in the recent release (31+), it added a lot of look and feel changes which cause the
+					//problem - when clicking or hitting enter to open the single select, the opened options layer is always over anything on the page, thus it will be
+					//visible to users which is unexpected.
+					var isGoogleChrome = /chrom(e|ium)/.test(navigator.userAgent.toLowerCase());
+					if(isGoogleChrome){
+						evt.preventDefault();
+					}
+					// evt.stopPropagation();				
+					if(_isOpenFlag){					
+						var childid = _getPostID("postChildID");
+						var _target = $("#" + childid + " li." + _styles.selected);
+						_target.find('.ddlabel').trigger('click');	
+						_close();						
+						/*setTimeout(function(){
+						_target.find(".ddlabel").trigger('click');
+						}, 1);*/
+						if($("#" + id).parent().hasClass("hpui-action-menu") && !$("#" + titleContainerId).hasClass("focusBackColor")) {
+							$("#" + titleContainerId).addClass("focusBackColor");
+						}
+					}else{
+						_open(evt);
+						if($("#" + id).parent().hasClass("hpui-action-menu") && $("#" + titleContainerId).hasClass("focusBackColor")) {
+							$("#" + titleContainerId).removeClass("focusBackColor");
+						}
+						//_adjustOpen();
+					}
+				} else {
+					evt.preventDefault();
+				}
+				//console.log("select: "+getElement(_element).selectedIndex);
+				//console.log("ui: "+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				break;
+			case DOWN_ARROW:
+			case RIGHT_ARROW:
+				//evt.preventDefault();
+				//evt.stopPropagation();
+				/*if(!(_settings.isTitleFixed && !_isOpenFlag)) {*/
+				if(!_isMultiple) {
+					_closure_next();
+				}
+				/*}*/
+				
+				//console.log("outer: first:"+getElement(_element).selectedIndex);
+				//console.log("outer: first index:"+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				//if (!(isFirefox=navigator.userAgent.indexOf("Firefox")>0)) {
+				//	_sync2Select();
+				//}
+				//console.log("outer: final:"+getElement(_element).selectedIndex);
+				//console.log("outer: final: index:"+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				break;
+			case UP_ARROW:
+			case LEFT_ARROW:
+				//evt.preventDefault();
+				//evt.stopPropagation();
+				/*if(!(_settings.isTitleFixed && !_isOpenFlag)) {*/
+				if(!_isMultiple) {
+					_closure_previous();
+				}	
+				/*}*/
+				//_closure_previous();
+				//if (!(isFirefox=navigator.userAgent.indexOf("Firefox")>0)) {
+				//	_sync2Select();
+				//}
+				break;
+			case SHIFT:
+				_shiftHolded = true;
+				break;
+			case CONTROL:
+				_controlHolded = true;	
+				//console.log("focus keydown--" + _controlHolded);
+				break;
+			default:
+				//if (evt.keyCode >= ALPHABETS_START && _isList === false) {
+					//if(_settings.enableFilterbox){
+						//_showFilterBox();
+						_sync2SelectByKey(evt);
+					//}
+				//};
+				break;
+			}
+			if (_isDisabled === true) return false;
+			fireEventIfExist("keydown");
+		//}
+	};
+	
+	// The behaviors are quite different from on_focus_keydown method.
+	var on_focus_keydown_when_title_fixed = function (evt) {
+		//console.log("focus keydown--_isOpenFlag" + _isOpenFlag);
+		if(!_isList){
+			//console.log("focus keydown--came");
+			switch (evt.keyCode) {
+			case TAB:
+				_close();
+				break;
+			case ESCAPE:
+				_close();
+				break;
+			case ENTER:
+				if (_isDisabled === true) return false;
+				fireEventIfExist("click");
+				evt.preventDefault();
+				evt.stopPropagation();
+				if(_isOpenFlag){
+					var childid = _getPostID("postChildID");
+					var _target = $("#" + childid + " li." + _styles.selected);
+					_target.find('.ddlabel').trigger('click');
+					_close();
+				}else{
+					_open(evt);
+					//_adjustOpen();
+				}
+				//console.log("select: "+getElement(_element).selectedIndex);
+				//console.log("ui: "+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				break;
+			case DOWN_ARROW:
+			case RIGHT_ARROW:
+				evt.preventDefault();
+				evt.stopPropagation();
+				_closure_next();
+				//console.log("outer: first:"+getElement(_element).selectedIndex);
+				//console.log("outer: first index:"+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				//if (!(isFirefox=navigator.userAgent.indexOf("Firefox")>0)) {
+					_sync2Select();
+				//}
+				//console.log("outer: final:"+getElement(_element).selectedIndex);
+				//console.log("outer: final: index:"+_getIndex($("#" + _getPostID("postChildID") + " li." + _styles.selected)));
+				break;
+			case UP_ARROW:
+			case LEFT_ARROW:
+				evt.preventDefault();
+				evt.stopPropagation();
+				_closure_previous();
+				//if (!(isFirefox=navigator.userAgent.indexOf("Firefox")>0)) {
+					_sync2Select();
+				//}
+				break;
+			case SHIFT:
+				_shiftHolded = true;
+				break;
+			case CONTROL:
+				_controlHolded = true;	
+				//console.log("focus keydown--" + _controlHolded);
+				break;
+			default:
+				//if (evt.keyCode >= ALPHABETS_START && _isList === false) {
+					//if(_settings.enableFilterbox){
+						//_showFilterBox();
+						_sync2SelectByKey(evt);
+					//}
+				//};
+				break;
+			}
+			if (_isDisabled === true) return false;
+			fireEventIfExist("keydown");
+		}
+	};
+	
+	// Get the first chars from all options and put them into an array, also stored as data.
+	var getFirstChars = function(){
+		var chars = [];
+		$("#" + _element + " option").each(function(index){
+			try{
+				var option = jQuery.trim($(this).html());
+				if(option){
+					var firstChar = option.substr(0,1).toLowerCase();
+					var firstCharCode = option.toUpperCase().charCodeAt(0);
+					if(chars.indexOf(firstChar)<0 || chars.indexOf(firstChar)===false){
+						chars.push(firstChar);
+					}
+				}
+			}catch(e){}
+		});
+		$("#" + _element).data("firstChars", chars);
+		return chars;
+	};
+	
+	var keyInGroup = function(key,group){
+		if(group.indexOf(key)>-1)
+			return true;
+		else
+			return false;
+	};
+	
+	// TODO rename the function to be more semantic.
+	var _sync2SelectByKey = function(e){
+		var key = String.fromCharCode(e.keyCode||e.which).toLowerCase();
+		var items = $("#" + _element + " option");
+		if(keyInGroup(key, $("#" + _element).data("firstChars"))){
+			if(_currentOption!=null){
+				var part1 = $(items).slice(0,_currentOption+1).toArray();
+				var part2 = $(items).slice(_currentOption+1).toArray();
+				var elements = part2.concat(part1);
+			}else{
+				var elements = getElement(_element).options;
+			}
+				
+			for(var i=0;i<elements.length;i++){
+				var el = elements[i];
+				try{
+					var option = jQuery.trim($(el).html());
+					if(option){
+						var firstChar = option.substr(0,1).toLowerCase();
+						var firstCharCode = option.toLowerCase().charCodeAt(0);
+						if(firstChar==key){
+							_currentOption = $(items).index(el);
+							//el.focus();
+							break;
+						}
+					}
+				}catch(e){}
+			}
+		}
+		//when click some special key, the first option ('select one') should be selected. --- add by June
+		if(_currentOption != null) {
+			var childid = _getPostID("postChildID");
+			$("#" + childid + " li." + _styles_i.li).removeClass(_styles.selected);
+			$($("#" + childid + " li." + _styles_i.li)[_currentOption]).addClass(_styles.selected);
+			_updateTitleUI(_currentOption);
+		}
+	};
+	
+	var _sync2Select = function () {
+		var childid = _getPostID("postChildID");
+		var selected = $("#" + childid + " li." + _styles.selected);		
+		if (_isMultiple && (_shiftHolded || _controlHolded) || _forcedTrigger) {
+			//getElement(_element).selectedIndex = -1; //reset old
+		};
+		var index;
+		if (selected.length == 0) {
+			index = -1;
+		} else if (selected.length > 1) {
+			//selected multiple
+			_selectMutipleOptions(selected);
+			//index = $("#" + childid + " li." + _styles.selected);
+			//console.log("multiple");
+			
+		} else {
+			//if one selected
+			index = _getIndex($("#" + childid + " li." + _styles.selected));
+			//console.log(index);
+		};		
+		//console.log("first:"+getElement(_element).selectedIndex);
+		if ((getElement(_element).selectedIndex != index || _forcedTrigger) && selected.length<=1) {			
+			_forcedTrigger = false;			
+			var evt = has_handler("change");
+			//getElement(_element).selectedIndex = index;	
+			//_setValue(index);
+			//local
+			if (typeof _settings.on.change == "function") {
+				var d = _getDataAndUI();
+				_settings.on.change(d.data, d.ui);
+			};			
+			//$("#" + _element).trigger("change");			
+		};
+		//console.log("final:"+getElement(_element).selectedIndex);
+	};
+	
+	var on_keydown = function (evt) {
+		//console.log('on_keydown triggered');
+		var tid = _getPostID("postTitleTextID");
+		switch (evt.keyCode) {
+			case TAB:
+				/*evt.preventDefault();
+				evt.stopPropagation();
+				if (_shiftHolded) {
+					_previous();
+				} else {
+					_next();		
+				}*/
+				_close();
+				break;
+			case DOWN_ARROW:
+			case RIGHT_ARROW:
+				//evt.preventDefault();
+				//evt.stopPropagation();
+				//_hideFilterBox();
+				_closure_next();
+				break;
+			case UP_ARROW:
+			case LEFT_ARROW:
+				//evt.preventDefault();
+				//evt.stopPropagation();
+				//_hideFilterBox();
+				_closure_previous();
+				break;
+			case ESCAPE:
+			case ENTER:
+				var childid = _getPostID("postChildID");
+				var _target = $("#" + childid + " li." + _styles.selected);				
+				if (_isDisabled === true) return false;
+				_oldSelected = $("#" + childid + " li." + _styles.selected);
+				_lastTarget = _target[0];
+				evt.preventDefault();
+				evt.stopPropagation();
+				//select current input
+				if(_settings.enableCheckbox===true) {
+					if(_target[0].nodeName.toLowerCase() === "input") {
+						_controlHolded = true;
+					};	
+				};
+				if (_isList === true) {
+					if (_isMultiple) {					
+						if (_shiftHolded === true) {
+							_target.addClass(_styles.selected);
+							var selected = $("#" + childid + " li." + _styles.selected);
+							var lastIndex = _getIndex(_target[0]);
+							if (selected.length > 1) {
+								var items = $("#" + childid + " li." + _styles_i.li);
+								var ind1 = _getIndex(selected[0]);
+								var ind2 = _getIndex(selected[1]);
+								if (lastIndex > ind2) {
+									ind1 = (lastIndex);
+									ind2 = ind2 + 1;
+								};
+								for (var i = Math.min(ind1, ind2); i <= Math.max(ind1, ind2); i++) {
+									var current = items[i];
+									if ($(current).hasClass(_styles.enabled)) {
+										$(current).addClass(_styles.selected);
+									};
+								};
+							};
+						} else if (_controlHolded === true) {
+							_target.toggleClass(_styles.selected); //toggle
+							if(_settings.enableCheckbox===true) {
+								var checkbox = _target.childNodes[0];
+								checkbox.checked = !checkbox.checked; //toggle
+							};
+						} else {
+							$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+							$("#" + childid + " input:checkbox").prop("checked", false);
+							_target.addClass(_styles.selected);
+							if(_settings.enableCheckbox===true) {
+								_target[0].childNodes[0].checked = true;
+							};
+						};					
+					} else {
+						$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+						_target.addClass(_styles.selected);
+					};
+					//fire event on mouseup
+				} else {
+					$("#" + childid + " li." + _styles.selected).removeClass(_styles.selected);
+					_target.addClass(_styles.selected);
+				};
+				//if($("#" + childid + " li." + _styles.selected + ' > a').hasClass('ddlabel')){
+					_target.find('.ddlabel').trigger('click');
+					//$("#" + childid + " li." + _styles.selected + ' > a.ddlabel').trigger('click');
+				//}
+				_fireAfterItemClicked();
+				if(!_isMultiple){
+					_close();	
+					$("#" + _element).focus();
+				}	
+				//console.log("click enter key, invoke _close method");
+				break;
+			case SHIFT:
+				_shiftHolded = true;
+				break;
+			case CONTROL:
+				_controlHolded = true;
+				//isClickFlag = true;
+				//console.log("on_keydown _controlHolded---------" +_controlHolded);
+				break;
+			default:
+				_sync2SelectByKey(evt);
+				// if (evt.keyCode >= ALPHABETS_START && _isList === false) {
+				// 	if(_settings.enableFilterbox){
+				// 		_showFilterBox();
+				// 	}
+				// };
+				break;
+		};
+		if (_isOpenFlag){
+			_adjustOpen();
+		}
+		if (_isDisabled === true) return false;
+		fireEventIfExist("keydown");
+	};
+	
+	var on_keyup = function (evt) {
+		//console.log($._data($(document).get(0), "events"));
+		switch (evt.keyCode) {
+			case SHIFT:
+				_shiftHolded = false;
+				break;
+			case CONTROL:
+				_controlHolded = false;
+				//console.log("key up---_controlHolded----------" + _controlHolded);
+				break;
+		};
+		if (_isDisabled === true) return ;
+		fireEventIfExist("keyup");
+	};
+	var on_dblclick = function (evt) {
+		if (_isDisabled === true) return ;
+		fireEventIfExist("dblclick");
+	};
+	var on_mousemove = function (evt) {
+		if (_isDisabled === true) return ;
+		fireEventIfExist("mousemove");
+	};
+	
+	var on_mouseover = function (evt) {
+		if (_isDisabled === true) return ;
+		evt.preventDefault();
+		fireEventIfExist("mouseover");
+		//$("body").off("click", _close);
+	};
+	var on_mouseout = function (evt) {
+		if (_isDisabled === true) return ;
+		evt.preventDefault();
+		fireEventIfExist("mouseout");
+		//$("body").on("click", _close);
+	};
+	var on_mousedown = function (evt) {
+		if (_isDisabled === true) return ;
+		fireEventIfExist("mousedown");
+	};
+	var on_mouseup = function (evt) {
+		if (_isDisabled === true) return ;
+		fireEventIfExist("mouseup");
+	};
+	var option_has_handler = function (opt, name) {
+		//True if a handler has been added in the html.
+		var evt = {byElement: false, byJQuery: false, hasEvent: false};
+		if ($(opt).prop("on" + name) != undefined) {
+			evt.hasEvent = true;
+			evt.byElement = true;
+		};
+		// True if a handler has been added using jQuery.
+		var evs = $(opt).data("events");
+		if (evs && evs[name]) {
+			evt.hasEvent = true;
+			evt.byJQuery = true;
+		};
+		return evt;
+	};
+	var fireOptionEventIfExist = function (li, evt_n) {
+		//console.log('fireOptionEventIfExist');
+		if (_settings.disabledOptionEvents == false) {
+			var opt = getElement(_element).options[_getIndex(li)];
+			//check if original has some
+			if (option_has_handler(opt, evt_n).hasEvent === true) {
+				if (option_has_handler(opt, evt_n).byElement === true) {
+					opt["on" + evt_n]();
+				};
+				if (option_has_handler(opt, evt_n).byJQuery === true) {
+					switch (evt_n) {
+						case "keydown":
+						case "keyup":
+							//key down/up will check later
+							break;
+						default:
+							$(opt).trigger(evt_n);
+							break;
+					};
+				};
+				return false;
+			};
+		};
+	};
+	var fireEventIfExist = function (evt_n) {
+		//console.log('fireEventIfExist',evt_n);
+		//local
+		if (typeof _settings.on[evt_n] == "function") {
+			//console.log('typeof _settings.on[evt_n] == "function"');
+			_settings.on[evt_n].apply(this, arguments);
+		};
+		//check if original has some
+		if (has_handler(evt_n).hasEvent === true) {
+			//console.log('has_handler(evt_n).hasEvent === true');
+			if (has_handler(evt_n).byElement === true) {
+				//console.log('has_handler(evt_n).byElement === true');
+				getElement(_element)["on" + evt_n]();
+			};
+			if (has_handler(evt_n).byJQuery === true) {
+				//console.log('has_handler(evt_n).byJQuery === true');
+				switch (evt_n) {
+					case "keydown":
+					case "keyup":
+						//key down/up will check later
+						break;
+					default:
+						$("#" + _element).trigger(evt_n);
+						break;
+				};
+			};
+			return false;
+		};
+	};
+	/******************************* navigation **********************************************/
+	var _scrollToIfNeeded = function (opt) {
+		var childid = _getPostID("postChildID");
+		//if scroll is needed
+		opt = (opt !== undefined) ? opt : $("#" + childid + " li." + _styles.selected);
+		if (opt.length > 0) {
+			var pos = parseInt(($(opt).position().top));
+			var posHeight = pos+parseInt($(opt).height());
+			var ch = parseInt($("#" + childid).height());
+			if (posHeight > ch || pos <= parseInt($(opt).height())) {
+				var top = pos + $("#" + childid).scrollTop() - (ch/2);
+				$("#" + childid).animate({scrollTop:top}, 500);
+			};
+		};
+	};
+	
+	var _closure_next = function () {		
+		var childid = _getPostID("postChildID");
+		var selectedLength = $("#" + childid + " li." + _styles.selected).length;	
+		_oldSelected = $("#" + childid + " li." + _styles.selected);
+		_forcedTrigger = (_oldSelected.length != selectedLength || selectedLength == 0) ? true : false;
+		var items = $("#" + childid + " li." + _styles_i.li);
+		var selected = $("#" + childid + " li." + _styles.selected).last();
+		var index;
+		if (selected.length == 0) {
+			if(_settings.isTitleFixed) {
+				index = 0;
+			} else {
+				//multiple
+				index = -1;
+			}
+		} else {
+			index = $("#" + childid + " li." + _styles_i.li).index(selected);
+		}
+		//selected = (selected.length==0) ? items[0] : selected;
+		//var index = $("#" + childid + " li." + _styles_i.li).index(selected);
+		if ((index < items.length - 1)) {
+			index = getNext(index);
+			if (index < items.length) { //check again - hack for last disabled 
+				if (!_shiftHolded || !_isList || !_isMultiple) {
+					// clear selected from all the selected option's
+					$("#" + _element).children().removeClass(_styles.selected);
+					$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				}
+				$(items[index]).addClass(_styles.selected);
+				$($("#" + _element).children()[index]).addClass(_styles.selected);
+				_updateTitleUI(index);
+				_scrollToIfNeeded($(items[index]));
+			};
+		} else if ((index==(items.length - 1))&&_isMultiple&&!_shiftHolded){
+			$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+			$(items[items.length - 1]).addClass(_styles.selected);
+		}
+		_updateSelectUIWhenFocus(index);
+		/*isErrorStatusFlag = false;
+		console.log("next ---" + isErrorStatusFlag);*/
+		if(!_settings.isTitleFixed && _isOpenFlag){
+			_adjustOpen();
+		}
+		function getNext(ind) {
+			ind = ind + 1;
+			if (ind > items.length) {
+				return ind;
+			};
+			if($(items[ind]).hasClass('hpui-heading')) {
+				return ind = getNext(ind);
+			}
+			if ($(items[ind]).hasClass(_styles.enabled) === true) {
+				return ind;
+			};
+			return ind = getNext(ind);
+		};
+	}
+	
+	var _next = function () {
+		//var selectedLength = $("#" + childid + " li." + _styles.selected).length;	
+		//_oldSelected = $("#" + childid + " li." + _styles.selected);
+		//_forcedTrigger = (_oldSelected.length != selectedLength || selectedLength == 0) ? true : false;
+		var childid = _getPostID("postChildID");
+		var items = $("#" + childid + " li." + _styles_i.li);
+		var selected = $("#" + childid + " li." + _styles.selected);
+		selected = (selected.length==0) ? items[0] : selected;
+		//when filter box is open, click tab key or down key to next option
+		var visibleIndex;
+		var afterFilterArray = new Array();
+		if(_isFilterBoxOpen){
+			var visibleObj = $("#" + childid + " li:visible");
+			var visibleObjLength = visibleObj.length;
+			for(var i = 0; i < visibleObjLength; i++) {
+				visibleIndex = $(visibleObj[i]).index();
+				afterFilterArray.push(visibleIndex);
+			}
+			if(afterFilterArray.length != 0) {
+				//console.log(_settings.tabSelectedIndex + "_settings.tabSelectedIndex");
+				var selectedIndex = $("#" + childid + " li." + _styles_i.li).index(selected);
+				
+				$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				//$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				
+				//non-selected in visible state
+				if(selectedIndex == -1 || $.inArray(selectedIndex,afterFilterArray) == -1) {
+					$(items[afterFilterArray[0]]).addClass(_styles.selected);
+				}else {
+					//non-last one 
+					if((afterFilterArray[afterFilterArray.length-1]) != selectedIndex) {
+						//console.log((afterFilterArray[ .length-1]) + "-----" + selectedIndex);
+						//get the selected option's index from array, than get next option will be selected 
+						var nextSelectedIndex = $.inArray(selectedIndex,afterFilterArray)+1;
+						//var nextSelectedIndex = afterFilterArray.indexOf(selectedIndex) + 1;
+						$(items[afterFilterArray[nextSelectedIndex]]).addClass(_styles.selected);
+					}else{
+						//if the selected option is the last one, it will be selected always
+						$(items[afterFilterArray[0]]).addClass(_styles.selected);
+					}
+				}				
+			}
+			var lastSelectedIndex = $("#" + childid + " li." + _styles.selected).index();
+			_updateTitleUI(lastSelectedIndex);
+		}else{
+			var index = $("#" + childid + " li." + _styles_i.li).index(selected);
+			if ((index < items.length - 1)) {
+				index = getNext(index);
+				if (index < items.length) { //check again - hack for last disabled 
+					if (!_shiftHolded || !_isList || !_isMultiple) {
+						$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+					};
+					$(items[index]).addClass(_styles.selected);
+					_updateTitleUI(index);
+					/*if (_isList == true) {
+						_fireAfterItemClicked();
+					};*/
+					_scrollToIfNeeded($(items[index]));
+				};
+				
+			}else if(index == items.length - 1) {
+			//when the last option is selected, then click tab key or down key, can back to the first option
+				var preSelectTitleOption = 0;
+				if (!_shiftHolded || !_isList || !_isMultiple) {
+					$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				};
+				if($(items[0]).hasClass('hpui-heading')) {		
+					preSelectTitleOption = getNext(0);
+				}
+				$(items[preSelectTitleOption]).addClass(_styles.selected);
+				_updateTitleUI(preSelectTitleOption);
+				//_fireAfterItemClicked();
+				$("#" + childid).animate({scrollTop: 0}, 500);
+			}
+		}
+		//_fireAfterItemClicked();
+		//console.log("_next ----_isFilterBoxOpen----" + _isFilterBoxOpen);
+		function getNext(ind) {
+			ind = ind + 1;
+			if (ind > items.length) {
+				return ind;
+			};
+			if($(items[ind]).hasClass('hpui-heading')) {
+				return ind = getNext(ind);
+			}
+			if ($(items[ind]).hasClass(_styles.enabled) === true) {
+				return ind;
+			}; 
+			return ind = getNext(ind);
+		};
+	};
+	
+	var _closure_previous = function () {
+		var childid = _getPostID("postChildID");
+		var selectedLength = $("#" + childid + " li." + _styles.selected).length;	
+		_oldSelected = $("#" + childid + " li." + _styles.selected);
+		_forcedTrigger = (_oldSelected.length != selectedLength || selectedLength == 0) ? true : false;
+		var selected = $("#" + childid + " li." + _styles.selected);
+		var items = $("#" + childid + " li." + _styles_i.li);
+		if (selected.length == 0) {
+			if(_settings.isTitleFixed) {
+				index = 0;
+			} else {
+				//multiple
+				index = items.length;
+			}
+		} else {
+			index = $("#" + childid + " li." + _styles_i.li).index(selected[0]);
+		}
+		//var index = $("#" + childid + " li." + _styles_i.li).index(selected[0]);
+		if (index > 0) {
+			index = getPrev(index);
+			if (index < items.length && !(isFirefox=navigator.userAgent.indexOf("Firefox")>0)) {
+				//getElement(_element).selectedIndex = index + 1;
+			}
+			//when some option include 'hpui-heading' class,ignore this option
+			/*if(index == 0 || index <= -1){
+				index = items.length - 1;
+			}*/
+			if($(items[index]).hasClass('hpui-heading')) {
+				index = getPrev(index);
+			}
+			//if (index >= 0) { //check again - hack for disabled 
+				if (!_shiftHolded || !_isList || !_isMultiple) {
+					// clear selected from all the selected option's
+					$("#" + _element).children().removeClass(_styles.selected);
+					$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected)
+				}
+				$(items[index]).addClass(_styles.selected);
+				$($("#" + _element).children()[index]).addClass(_styles.selected);
+				_updateTitleUI(index);
+				//if (_isList == true) {
+					//_fireAfterItemClicked();
+				//};
+				//when the last option be selected, scroll to the first option
+				if(index == items.length - 1) {
+					$("#" + childid).animate({scrollTop: $(items[items.length-1]).position().top}, 500);
+				}
+				if (parseInt(($(items[index]).position().top + $(items[index]).height())) <= 0) {
+					var top = ($("#" + childid).scrollTop() - $("#" + childid).height()) - $(items[index]).height();
+					$("#" + childid).animate({scrollTop: top}, 500);
+				};
+			//};			
+		}else if (index ==0 && _isMultiple&&!_shiftHolded) {
+			$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+			$(items[0]).addClass(_styles.selected);	
+		}
+		_updateSelectUIWhenFocus(index);
+		/*isErrorStatusFlag = false;
+		console.log("previous ---" + isErrorStatusFlag);*/
+		//_fireAfterItemClicked();
+		if(!_settings.isTitleFixed && _isOpenFlag){		
+			_adjustOpen();
+		}
+		function getPrev(ind) {
+			ind = ind - 1;
+			if (ind < 0) {
+				return 0;
+			};
+			/*if($(items[ind]).hasClass('hpui-heading')) {
+				return ind = getPrev(ind);
+			}*/
+			if ($(items[ind]).hasClass(_styles.enabled) === true) {
+				return ind;
+			};
+			return ind = getPrev(ind);
+		};
+	}
+	
+	var _previous = function () {
+		var selected = $("#" + childid + " li." + _styles.selected).length;	
+		_oldSelected = $("#" + childid + " li." + _styles.selected);
+		_forcedTrigger = (_oldSelected.length != selected || selected == 0) ? true : false;
+		var childid = _getPostID("postChildID");		var selected = $("#" + childid + " li." + _styles.selected);
+		var items = $("#" + childid + " li." + _styles_i.li);
+		var index = $("#" + childid + " li." + _styles_i.li).index(selected[0]);
+		//when the filter box is open, then click tab+shift or up key, can select previous option
+		var visibleIndex;
+		var afterFilterArray = new Array();
+		if(_isFilterBoxOpen){
+			var visibleObj = $("#" + childid + " li:visible");
+			var visibleObjLength = visibleObj.length;
+			for(var i = 0; i < visibleObjLength; i++) {
+				visibleIndex = $(visibleObj[i]).index();
+				afterFilterArray.push(visibleIndex);
+			}
+			if(afterFilterArray.length != 0) {
+				//console.log(_settings.tabSelectedIndex + "_settings.tabSelectedIndex");
+				var selectedIndex = $("#" + childid + " li." + _styles_i.li).index(selected);
+				
+				$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				
+				//non-selected in all options or non-selected option in ater filter array
+				if(selectedIndex == -1 || $.inArray(selectedIndex,afterFilterArray) == -1) {
+					$(items[afterFilterArray[0]]).addClass(_styles.selected);
+				}else {
+					//non-first one 
+					if((afterFilterArray[0]) != selectedIndex) {
+						//console.log((afterFilterArray[afterFilterArray.length-1]) + "-----" + selectedIndex);
+						//get the selected option's index from array, than get next option will be selected 
+						var nextSelectedIndex = $.inArray(selectedIndex,afterFilterArray) - 1;
+						$(items[afterFilterArray[nextSelectedIndex]]).addClass(_styles.selected);
+					}else{
+						//if the selected option is the last one, it will be selected always
+						$(items[afterFilterArray[afterFilterArray.length-1]]).addClass(_styles.selected);
+					}
+				}				
+			}
+			var lastSelectedIndex = $("#" + childid + " li." + _styles.selected).index();
+			_updateTitleUI(lastSelectedIndex);
+		}else {
+			if (index >= 0) {
+				index = getPrev(index);
+			//	if (index >= 0) { //check again - hack for disabled 
+				if (!_shiftHolded || !_isList || !_isMultiple) {
+					$("#" + childid + " ." + _styles.selected).removeClass(_styles.selected);
+				};
+				// when some option include 'hpui-heading' class,ignore this option 
+				if(index == 0 || index <= -1){
+					index = items.length - 1;
+				}
+				if($(items[index]).hasClass('hpui-heading')) {
+					index = getPrev(index);
+				}					
+				$(items[index]).addClass(_styles.selected);
+				_updateTitleUI(index);
+				/*if (_isList == true) {
+					_fireAfterItemClicked();
+				};*/
+				//when the last option be selected, scroll to the first option
+				if(index == items.length - 1) {
+					$("#" + childid).animate({scrollTop: $(items[items.length-1]).position().top}, 500);
+				}else {
+					if (parseInt(($(items[index]).position().top + $(items[index]).height())) <= 0) {
+						var top = ($("#" + childid).scrollTop() - $("#" + childid).height()) - $(items[index]).height();
+						$("#" + childid).animate({scrollTop: top}, 500);
+					};
+				};
+				//};
+			}
+		}
+		//_fireAfterItemClicked();
+		function getPrev(ind) {
+			ind = ind - 1;
+			if (ind < 0) {
+				return ind;
+			};
+			if($(items[ind]).hasClass('hpui-heading')) {
+				return ind = getPrev(ind);
+			}
+			if ($(items[ind]).hasClass(_styles.enabled) === true) {
+				return ind;
+			};
+			return ind = getPrev(ind);
+		};
+	};
+
+
+	var _updateSelectUIWhenFocus = function (index) {
+		var childid = _getPostID("postChildID");
+		var id = _getPostID("postID");
+	    var items = $("#" + childid + " li." + _styles_i.li);
+		//isErrorStatusFlag = false;
+		var rawSelectElement = $(getElement(_element));		
+		var parentDiv = $("#" + id).parent();
+		var childrenDiv = $("#" + childid + " li");
+		if(rawSelectElement.hasClass(_styles.errorCSS)) {
+			if(!_isMultiple && !_isList && (index!=(items.length - 1)) && (index!=0)) {
+				$("#" + id + " .divider").addClass("focusBorderLeft");
+				parentDiv.removeClass(_styles.errorCSS);
+				rawSelectElement.removeClass(_styles.errorCSS);
+			}else if(_isMultiple && _isList ){/*&& (index!=(items.length - 1)) && (index!=0)*/
+				if(!_shiftHolded){
+					//when use ctrl key + up key(or ctrl key+ down key) an non-error option, should remove all options and this select's error status.
+					if(!$(items[index]).hasClass(_styles.errorCSS)) {
+						if(childrenDiv.hasClass(_styles.errorCSS)) {
+							childrenDiv.removeClass(_styles.errorCSS);
+							rawSelectElement.children().removeClass(_styles.errorCSS);
+							parentDiv.removeClass(_styles.errorCSS);
+							rawSelectElement.removeClass(_styles.errorCSS);
+						}
+					}else if($(items[index]).hasClass(_styles.errorCSS)){
+						//when use ctrl key + up key(or ctrl key+ down key) an error option, should remove all options except clicked option.
+						childrenDiv.removeClass(_styles.errorCSS);
+						rawSelectElement.children().removeClass(_styles.errorCSS);
+						$(items[index]).addClass(_styles.errorCSS);
+						$(rawSelectElement.children()[index]).addClass(_styles.errorCSS);
+					}	
+				}
+			} 
+		}
+	}
+
+	var _adjustOpen = function () {
+		var id = _getPostID("postID");
+		var childid = _getPostID("postChildID");
+		var pos = $("#" + id).offset();
+		var mH = $("#" + id).height();
+		//var isIE8 = $.browser.msie && +$.browser.version === 8;
+		var wH = $(window).height();
+		//var wH = $(window)[0].innerHeight;
+		var st = $(window).scrollTop();
+		var cH = _childHeight(_childHeight());
+		var top = $("#" + id).height(); //this close so its title height
+		if ((wH + st) < Math.floor(cH + mH + pos.top) || _settings.openDirection.toLowerCase() == 'alwaysup') {			
+			if(wH-pos.top-mH > cH || wH-pos.top-mH+st > pos.top-st){//scroll down
+				_isScrollDown = true;
+				if((wH-pos.top-mH+st) > pos.top-st){
+					cH = (cH > (wH - pos.top + st - mH) ? (wH - pos.top + st - mH) : cH) - 5;
+				}
+				$("#" + childid).css({top: (top-(_settings.isTitleFixed?4:2)) + "px", height: cH + "px"});
+				$("#" + id).removeClass("borderRadius borderRadiusBtm").addClass("borderRadiusTp");
+			} else {//scroll up -- if((pos.top - st + mH/2) >= wH/2)
+				_isScrollDown = false;
+				cH = ((cH > pos.top - st) ? (pos.top - st) : cH);
+				top = cH;
+				
+				$("#" + childid).css({top: "-" + (top+(_settings.isTitleFixed?2:1)) + "px", height: cH + "px"});
+				$("#" + id).removeClass("borderRadius borderRadiusTp").addClass("borderRadiusBtm");
+				/*var top = $("#" + childid).offset().top;
+				if (top < -10) {
+					$("#" + childid).css({top: (parseInt($("#" + childid).css("top")) - top + 20 + st) + "px", zIndex: _settings.zIndex});
+					$("#" + id).removeClass("borderRadiusBtm borderRadiusTp").addClass("borderRadius");
+				};*/
+			} 
+			$("#" + childid).css({display: 'block', zIndex: _settings.zIndex});
+			
+		} else {
+			_isScrollDown = true;
+			$("#" + childid).css({top: (top-(_settings.isTitleFixed?4:2)) + "px", zIndex: _settings.zIndex});
+			$("#" + id).removeClass("borderRadius borderRadiusBtm").addClass("borderRadiusTp");
+		};
+		
+		if(_settings.isTitleFixed){
+			$("#" + _getPostID("postTitleContainerID")).css("zIndex", _settings.zIndex+1);
+		}
+		
+
+		//hack for ie zindex
+		//i hate ie :D
+		if((typeof(getInternetExplorerVersion) == 'function') && (getInternetExplorerVersion() > 0)) {
+			if(getInternetExplorerVersion()<=7) {
+				$('div.ddcommon').css("zIndex", _settings.zIndex-10);
+				$("#" + id).css("zIndex", _settings.zIndex+5);
+			};
+		};		
+	};
+	var _open = function (e) {
+		//console.log('_open _isOpenFlag=',e);
+		if (_isDisabled === true) return false;
+		var id = _getPostID("postID");
+		var childid = _getPostID("postChildID");
+		// No need for select option in link drop down.
+		if(_settings.isTitleFixed){
+			$('#' + childid + ' li.selected').removeClass('selected');
+			//set selectedIndex=0 for original selector when open the dropdown
+			jQuery("#" + _element)[0].selectedIndex = 0;			
+			//console.log("select Index-----" + jQuery("#" + _element)[0].selectedIndex);
+		}
+		if (!_isOpenFlag) {
+			_isOpenFlag = true;
+			if (msBeautify.oldDiv != '') {
+				$("#" + msBeautify.oldDiv).css({display: "none"}); //hide all 
+			};
+			msBeautify.oldDiv = childid;
+			$("#" + childid + " li:hidden").each(function(index){
+				if($(this).hasClass('hpui-heading')) {
+					$(this).hide();
+				} 
+			}); //show if hidden
+			_adjustOpen();
+			var animStyle = _settings.animStyle;
+			if(animStyle=="" || animStyle=="none") {
+				$("#" + childid).css({display:"block"});
+				_scrollToIfNeeded();
+				if (typeof _settings.on.open == "function") {
+					var d = _getDataAndUI();
+					_settings.on.open(d.data, d.ui);
+				};
+			} else {				
+				$("#" + childid)[animStyle]("fast", function () {
+					_scrollToIfNeeded();
+					if (typeof _settings.on.open == "function") {
+						var d = _getDataAndUI();
+						_settings.on.open(d.data, d.ui);
+					};
+				});
+			};
+			// Register the click event handler on body once the dropdown is open, so that if 
+			// user clicks somewhere on the body out of the dropdown's DIV, then the dropdown
+			// should be closed.
+			if(e.type == "click"){
+				//e.stopPropagation();
+				$("#" + _element).data("clickedWhichDropdown", e.target);
+				//console.log("open method");
+				//$("body").on("click", _close);
+			}
+			//when open the dropdown, bind the click event in body object
+			$("body").on("click", _close);
+			//_unbind_on_events(); //remove old one
+			//_bind_on_events();
+		} else {
+			if(_settings.event!=='mouseover') {
+				//console.log("_open method invoke _close method");
+				_close();
+			};
+		};
+		//console.log("_open method------ _isOpenFlag"+ _isOpenFlag);
+	};
+	var _close = function (e) {
+		//console.log('_close',e);
+		if(e && e.target == $("#" + _element).data("clickedWhichDropdown")){
+			return;
+		}
+		//console.log("to close the dropdown");
+		//console.log("first line---_close method------ _isOpenFlag"+ _isOpenFlag);
+		_isOpenFlag = false;
+		var id = _getPostID("postID");
+		//console.log('_close triggered',id);
+		var childid = _getPostID("postChildID");
+		if (_isList === false || _settings.enableCheckbox===true) {
+			$("#" + childid).css({display: "none"});
+			$("#" + id).removeClass("borderRadiusTp borderRadiusBtm").addClass("borderRadius");			
+		};
+		//_unbind_on_events();
+		if (typeof _settings.on.close == "function") {
+			var d = _getDataAndUI();
+			_settings.on.close(d.data, d.ui);
+		};
+		//rest some old stuff
+		//_hideFilterBox();
+		//_childHeight(_childHeight()); //its needed after filter applied
+		$("#" + childid).css({zIndex:1});
+		if(_settings.isTitleFixed){
+			$("#" + _getPostID("postTitleContainerID")).css("zIndex", 1);
+			//set selectedIndex=0 for original selector when open the dropdown
+			jQuery("#" + _element)[0].selectedIndex = 0;
+		}
+		// Once the dropdown is closed, the body click event handler will be no longer needed.
+		$("body").off("click", _close);
+		//console.log("_close method------ _controlHolded-----------"+ _controlHolded);
+	};
+	/*********************** </layout> *************************************/	
+	var _mergeAllProp = function () {
+		_orginial = $.extend(true, {}, getElement(_element));
+		for (var i in _orginial) {
+			if (typeof _orginial[i] != "function") {
+				_this[i] = _orginial[i]; //properties
+			};
+		};
+		_this.selectedText = (_orginial.selectedIndex >= 0) ? _orginial.options[_orginial.selectedIndex].text : "";
+		_this.version = msBeautify.version.msDropdown;
+		_this.author = msBeautify.author;
+	};
+	var _getDataAndUIByOption = function (opt) {
+		if (opt != null && typeof opt != "undefined") {
+			var childid = _getPostID("postChildID");
+			var data = _parseOption(opt);
+			var ui = $("#" + childid + " li." + _styles_i.li + ":eq(" + (opt.index) + ")");
+			return {data: data, ui: ui, option: opt, index: opt.index};
+		};
+		return null;
+	};
+	var _getDataAndUI = function () {
+		var childid = _getPostID("postChildID");
+		var ele = getElement(_element);
+		var data, ui, option, index;
+		if (ele.selectedIndex == -1) {
+			data = null;
+			ui = null;
+			option = null;
+			index = -1;
+		} else {
+			ui = $("#" + childid + " li." + _styles.selected);
+			if (ui.length > 1) {
+				var d = [], op = [], ind = [];
+				for (var i = 0; i < ui.length; i++) {
+					var pd = _getIndex(ui[i]);
+					d.push(pd);
+					op.push(ele.options[pd]);
+				};
+				data = d;
+				option = op;
+				index = d;
+			} else {
+				option = ele.options[ele.selectedIndex];
+				data = _parseOption(option);
+				index = ele.selectedIndex;
+			};
+		};
+		return {data: data, ui: ui, index: index, option: option};
+	};
+	var _updateTitleUI = function (index, byvalue) {
+		//console.log('_settings.isTitleFixed',_settings.isTitleFixed);
+		if(_settings.isTitleFixed){
+			return;
+		}
+		var titleid = _getPostID("postTitleID");
+		var value = {};
+		if (index == -1) {
+			value.text = "&nbsp;";
+			value.className = "";
+			//value.description = "";
+			value.image = "";
+		} else if (typeof index != "undefined") {
+			var opt = getElement(_element).options[index];
+			if(!$(opt).hasClass('hpui-heading')) {
+				var titleidSpan = $("#" + titleid);
+				var titleidSpanParent = titleidSpan.parent();
+				if(titleidSpanParent.hasClass('ddTitlePreSelect')) {
+					var rawSelectElement = $(getElement(_element));
+					var id = _getPostID("postID");
+					var parentDiv = $("#" + id).parent();
+					if(rawSelectElement.hasClass(_styles.errorCSS)) {
+						parentDiv.removeClass(_styles.errorCSS);
+						rawSelectElement.removeClass(_styles.errorCSS);
+					}
+					titleidSpanParent.removeClass('ddTitlePreSelect');
+					titleidSpanParent.addClass('ddTitle');
+				}
+			}
+			value = _parseOption(opt);
+		} else {
+			value = byvalue;
+		};
+		//update title parent div class
+		
+		
+		
+		//update title and current
+		$("#" + titleid).find("." + _styles.label).html(value.text);
+		getElement(titleid).className = _styles.ddTitleText + " " + value.className;
+		//update desction		 
+		/*if (value.description != "") {
+			$("#" + titleid).find("." + _styles.description).html(value.description).show();
+		} else {
+			$("#" + titleid).find("." + _styles.description).html("").hide();
+		};*/
+		//update icon
+		var img = $("#" + titleid).find("img");
+		if (img.length > 0) {
+			$(img).remove();
+		};
+		if (value.image != "" && _settings.showIcon) {
+			img = _createElement("img", {src: value.image});
+			$("#" + titleid).prepend(img);
+			if(value.imagecss!="") {
+				img.className = value.imagecss+" ";
+			};
+			/*if (value.description == "") {
+				img.className = img.className+_styles_i.fnone;
+			};*/
+		};
+	};
+	var _updateProp = function (p, v) {
+		_this[p] = v;
+	};
+	var _updateUI = function (a, opt, i) { //action, index, opt
+		var childid = _getPostID("postChildID");
+		var wasSelected = false;
+		switch (a) {
+			case "add":
+				var li = _createChild(opt || getElement(_element).options[i]);				
+				var index;
+				if (arguments.length == 3) {
+					index = i;
+				} else {
+					index = $("#" + childid + " li." + _styles_i.li).length - 1;
+				};				
+				if (index < 0 || !index) {
+					$("#" + childid + " ul").append(li);
+				} else {
+					var at = $("#" + childid + " li." + _styles_i.li)[index];
+					$(at).before(li);
+				};
+				_removeChildEvents();
+				_applyChildEvents();
+				if (_settings.on.add != null) {
+					_settings.on.add.apply(this, arguments);
+				};
+				break;
+			case "remove":
+				wasSelected = $($("#" + childid + " li." + _styles_i.li)[i]).hasClass(_styles.selected);
+				$("#" + childid + " li." + _styles_i.li + ":eq(" + i + ")").remove();
+				var items = $("#" + childid + " li." + _styles.enabled);
+				if (wasSelected == true) {
+					if (items.length > 0) {
+						$(items[0]).addClass(_styles.selected);
+						var ind = $("#" + childid + " li." + _styles_i.li).index(items[0]);
+						_setValue(ind);
+					};
+				};
+				if (items.length == 0) {
+					_setValue(-1);
+				};
+				if ($("#" + childid + " li." + _styles_i.li).length < _settings.visibleRows && !_isList) {
+					_childHeight(-1); //set autoheight
+				};
+				if (_settings.on.remove != null) {
+					_settings.on.remove.apply(this, arguments);
+				};
+				break;
+		};	
+	};
+	/************************** public methods/events **********************/
+	this.act = function () {
+		var action = arguments[0];
+		Array.prototype.shift.call(arguments);
+		switch (action) {
+			case "add":
+				_this.add.apply(this, arguments);
+				break;
+			case "remove":
+				_this.remove.apply(this, arguments);
+				break;
+			default:
+				try {
+					getElement(_element)[action].apply(getElement(_element), arguments);
+				} catch (e) {
+					//there is some error.
+				};
+				break;
+		};
+	};
+	
+	this.add = function () {
+		var text, value, title, image;//, description;
+		var obj = arguments[0];		
+		if (typeof obj == "string") {
+			text = obj;
+			value = text;
+			opt = new Option(text, value);
+		} else {
+			text = obj.text || '';
+			value = obj.value || text;
+			title = obj.title || '';
+			image = obj.image || '';
+			//description = obj.description || '';
+			//image:imagePath, title:title, description:description, value:opt.value, text:opt.text, className:opt.className||""
+			opt = new Option(text, value);
+			//$(opt).data("description", description);
+			$(opt).data("image", image);
+			$(opt).data("title", title);
+		};
+		arguments[0] = opt; //this option
+		getElement(_element).add.apply(getElement(_element), arguments);
+		_updateProp("children", getElement(_element)["children"]);
+		_updateProp("length", getElement(_element).length);
+		_updateUI("add", opt, arguments[1]);
+	};
+	this.remove = function (i) {
+		getElement(_element).remove(i);
+		_updateProp("children", getElement(_element)["children"]);
+		_updateProp("length", getElement(_element).length);
+		_updateUI("remove", undefined, i);
+	};
+	this.set = function (prop, val) {
+		if (typeof prop == "undefined" || typeof val == "undefined") return false;
+		prop = prop.toString();
+		try {
+			_updateProp(prop, val);
+		} catch (e) {/*this is ready only */};
+		
+		switch (prop) {
+			case "size":
+				getElement(_element)[prop] = val;
+				if (val == 0) {
+					getElement(_element).multiple = false; //if size is zero multiple should be false
+				};
+				_isList = (getElement(_element).size > 1 || getElement(_element).multiple == true) ? true : false;
+				_fixedForList();
+				break;
+			case "multiple":
+				getElement(_element)[prop] = val;
+				_isList = (getElement(_element).size > 1 || getElement(_element).multiple == true) ? true : false;
+				_isMultiple = getElement(_element).multiple;
+				_fixedForList();
+				_updateProp(prop, val);
+				break;
+			case "disabled":
+				getElement(_element)[prop] = val;
+				_isDisabled = val;
+				_fixedForDisabled();
+				break;
+			case "selectedIndex":
+			case "value":
+				getElement(_element)[prop] = val;
+				var childid = _getPostID("postChildID");
+				$("#" + childid + " li." + _styles_i.li).removeClass(_styles.selected);
+				$($("#" + childid + " li." + _styles_i.li)[getElement(_element).selectedIndex]).addClass(_styles.selected);
+				_setValue(getElement(_element).selectedIndex);
+				break;
+			case "length":
+				var childid = _getPostID("postChildID");
+				if (val < getElement(_element).length) {
+					getElement(_element)[prop] = val;
+					if (val == 0) {
+						$("#" + childid + " li." + _styles_i.li).remove();
+						_setValue(-1);
+					} else {
+						$("#" + childid + " li." + _styles_i.li + ":gt(" + (val - 1) + ")").remove();
+						if ($("#" + childid + " li." + _styles.selected).length == 0) {
+							$("#" + childid + " li." + _styles.enabled + ":eq(0)").addClass(_styles.selected);
+						};
+					};
+					_updateProp(prop, val);
+					_updateProp("children", getElement(_element)["children"]);
+				};
+				break;
+			case "id":
+				//please i need this. so preventing to change it. will work on this later
+				break;
+			default:
+				//check if this is not a readonly properties
+				try {
+					getElement(_element)[prop] = val;
+					_updateProp(prop, val);
+				} catch (e) {
+					//silent
+				};
+				break;
+		}
+	};
+	this.get = function (prop) {
+		return _this[prop] || getElement(_element)[prop]; //return if local else from original
+	};
+	this.visible = function (val) {
+		var id = _getPostID("postID");		
+		if (val === true) {
+			$("#" + id).show();
+		} else if (val === false) {
+			$("#" + id).hide();
+		} else {
+			return ($("#" + id).css("display")=="none") ? false : true;
+		};
+	};
+	this.debug = function (v) {
+		msBeautify.debug(v);
+	};
+	this.close = function () {
+		_close();
+	};
+	this.open = function () {		
+		_open();
+	};
+	this.showRows = function (r) {
+		if (typeof r == "undefined" || r == 0) {
+			return false;
+		};
+		_settings.visibleRows = r;
+		_childHeight(_childHeight());
+	};
+	this.visibleRows = this.showRows;
+	this.on = function (type, fn) {
+		$("#" + _element).on(type, fn);
+	};
+	this.off = function (type, fn) {
+		$("#" + _element).off(type, fn);
+	};
+	this.addMyEvent = this.on;
+	this.getData = function () {
+		return _getDataAndUI()
+	};
+	this.namedItem = function () {
+		var opt = getElement(_element).namedItem.apply(getElement(_element), arguments);
+		return _getDataAndUIByOption(opt);
+	};
+	this.item = function () {
+		var opt = getElement(_element).item.apply(getElement(_element), arguments);
+		return _getDataAndUIByOption(opt);
+	};	
+	//v 3.2
+	this.setIndexByValue = function(val) {
+		this.set("value", val);
+	};
+	this.destroy = function () {
+		var hidid = _getPostID("postElementHolder");
+		var id = _getPostID("postID");
+		$("#" + id + ", #" + id + " *").off();
+		$("#" + id).parent().remove();
+		$("#" + _element).parent().replaceWith($("#" + _element));		
+		$("#" + _element).data("dd", null);
+	};
+	//Create msDropDown		
+	_construct();
+};
+//bind in jquery
+$.fn.extend({
+			msDropDown: function(settings)
+			{
+				return this.each(function()
+				{
+					if (!$(this).data('dd')){
+						var mydropdown = new dd(this, settings);
+						$(this).data('dd', mydropdown);
+					};
+				});
+			}
+});
+$.fn.msDropdown = $.fn.msDropDown; //make a copy
+})(jQuery);
